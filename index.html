@@ -1147,6 +1147,28 @@ function bestaetige(text, okText){
   });
 }
 
+/* Wie bestaetige(), aber mit mehreren Antwortmöglichkeiten.
+   optionen: [{wert, text, art}] – art "prim" hebt hervor, "gefahr" warnt. */
+function frageWahl(titel, text, optionen){
+  return new Promise(res=>{
+    const d = document.createElement("dialog");
+    d.innerHTML = '<div class="dlg-kopf">'+esc(titel)+'</div>'+
+      '<div class="dlg-body"><div class="hinweis">'+text+'</div></div>'+
+      '<div class="dlg-fuss" style="flex-wrap:wrap">'+
+        '<button class="btn" data-w="">Abbrechen</button>'+
+        optionen.map(o=>'<button class="btn '+(o.art==="prim"?"prim":"")+'" data-w="'+esc(o.wert)+'">'+
+          esc(o.text)+'</button>').join("")+
+      '</div>';
+    document.body.appendChild(d);
+    d.addEventListener("click", e=>{
+      const b = e.target.closest("button[data-w]"); if(!b) return;
+      d.close(); d.remove(); res(b.dataset.w || null);
+    });
+    d.addEventListener("cancel", ()=>{ d.remove(); res(null); });
+    d.showModal();
+  });
+}
+
 function frageText(titel, vorgabe){
   return new Promise(res=>{
     const d = document.createElement("dialog");
@@ -1295,15 +1317,35 @@ async function sammLoeschen(id){
   const drin = alleKats().filter(k=>k.sammlungId===id);
   const rest = aktiveSamm().filter(y=>y.id!==id);
   if(!rest.length){ toast("Die letzte Sammlung lässt sich nicht löschen."); return; }
-  const ok = await bestaetige("Sammlung „"+x.name+"“ löschen? Die "+drin.length+
-    " enthaltenen Kategorien wandern nach „"+rest[0].name+"“ und bleiben erhalten.", "Löschen");
-  if(!ok) return;
+
+  const zahl = drin.reduce((n,k)=>n+aktiveLinks(k).length,0);
+  let wahl = "leeren";
+  if(drin.length){
+    wahl = await frageWahl("Sammlung löschen",
+      "In „"+esc(x.name)+"“ liegen "+drin.length+" Kategorien mit "+zahl+" Links.",
+      [ { wert:"behalten", text:"Kategorien nach „"+rest[0].name+"“ verschieben", art:"prim" },
+        { wert:"alles",    text:"Alles mitlöschen" } ]);
+    if(!wahl) return;
+    if(wahl === "alles"){
+      const sicher = await bestaetige(zahl+" Links werden gelöscht. Das lässt sich nur über eine "+
+        "Sicherungskopie oder die Versionshistorie in Drive rückgängig machen.", "Endgültig löschen");
+      if(!sicher) return;
+    }
+  }
+
   const t = jetzt();
-  for(const k of drin){ k.sammlungId = rest[0].id; k.updatedAt = t; }
+  for(const k of drin){
+    if(wahl === "alles"){
+      k.deleted = true; k.updatedAt = t;
+      for(const l of k.links) if(!l.deleted){ l.deleted = true; l.updatedAt = t; }
+    } else { k.sammlungId = rest[0].id; k.updatedAt = t; }
+  }
   x.deleted = true; x.updatedAt = t;
   if(S.sammlung===id){ S.sammlung = "__alle"; S.einst.letzteSammlung = "__alle"; einstSichern(); }
   geaendert(); zeichnen();
+  toast(wahl === "alles" ? "Sammlung samt Inhalt gelöscht." : "Sammlung gelöscht, Kategorien verschoben.");
 }
+
 function katInSammlung(katId, sammId){
   const k = findeKat(katId); if(!k || k.sammlungId===sammId) return;
   const ziel = sammId==="__alle"? null : findeSamm(sammId);
@@ -1488,12 +1530,56 @@ async function importDateiLesen(datei){
     neu = ausTextLesen(txt);
   }
   if(!neu || !neu.kategorien.length){ toast("Keine Lesezeichen in der Datei gefunden."); return; }
+
   const anzahl = neu.kategorien.reduce((s,k)=>s+k.links.length,0);
   const benutzte = new Set(neu.kategorien.map(k=>k.sammlungId));
-  const sZahl = (neu.sammlungen||[]).filter(x=>benutzte.has(x.id)).length;
-  const ok = await bestaetige(anzahl+" Links in "+neu.kategorien.length+" Kategorien und "+
-    sZahl+" Sammlungen gefunden. Zu den vorhandenen Favoriten hinzufügen?", "Hinzufügen");
-  if(!ok) return;
+  const mitgebracht = (neu.sammlungen||[]).filter(x=>benutzte.has(x.id));
+
+  const beschreibung =
+    "<b>"+anzahl+" Links</b> in "+neu.kategorien.length+" Kategorien gefunden.<br><br>"+
+    "Die Datei bringt die Sammlungen <i>"+
+      mitgebracht.map(x=>esc(x.name)).join("</i>, <i>")+"</i> mit."+
+    "<br><br>Wohin damit?";
+
+  const wahl = await frageWahl("Import", beschreibung, [
+    { wert:"struktur", text:"Struktur übernehmen", art:"prim" },
+    { wert:"eine",     text:"Alles in eine Sammlung …" }
+  ]);
+  if(!wahl) return;
+
+  if(wahl === "eine"){
+    const vorhandene = aktiveSamm();
+    let zielId = null;
+    if(vorhandene.length){
+      const w2 = await frageWahl("Zielsammlung", "In welche Sammlung soll alles hinein?",
+        vorhandene.slice(0,6).map(x=>({wert:x.id, text:x.name}))
+          .concat([{wert:"__neu", text:"＋ neue Sammlung …", art:"prim"}]));
+      if(!w2) return;
+      zielId = w2;
+    } else zielId = "__neu";
+
+    if(zielId === "__neu"){
+      const name = await frageText("Neue Sammlung", datei.name.replace(/\.[^.]+$/,""));
+      if(!name) return;
+      zielId = sammAnlegen(name);
+    }
+    /* Alles auf die Zielsammlung umbiegen; gleichnamige Kategorien zusammenlegen */
+    const nachName = new Map();
+    const gebuendelt = [];
+    for(const k of neu.kategorien){
+      const vorhanden = nachName.get(k.name);
+      if(vorhanden){
+        for(const l of k.links){ l.order = vorhanden.links.length; vorhanden.links.push(l); }
+      } else {
+        k.sammlungId = zielId;
+        nachName.set(k.name, k);
+        gebuendelt.push(k);
+      }
+    }
+    neu.kategorien = gebuendelt;
+    neu.sammlungen = [];
+  }
+
   S.daten = zusammenfuehren(S.daten, neu);
   geaendert(); zeichnen();
   toast(anzahl+" Links importiert.");
