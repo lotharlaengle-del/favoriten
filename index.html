@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dunkel">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Favoriten</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#12141a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Favoriten">
+<style>
+:root{
+  --bg:#12141a; --bg2:#181b23; --card:#1c2029; --card2:#222733;
+  --line:#2c3240; --line2:#3a4252;
+  --tx:#e6e9f0; --tx2:#98a0b3; --tx3:#6c7488;
+  --akz:#5b8def; --akz2:#7aa5ff;
+  --warn:#e0a33c; --ok:#4fb286; --err:#e0614a;
+  --r:10px; --sp:12px;
+  --spalte:270px;
+  --fs:14px;
+}
+html[data-theme="hell"]{
+  --bg:#f3f4f7; --bg2:#ffffff; --card:#ffffff; --card2:#f6f7fa;
+  --line:#e2e5ec; --line2:#cdd3de;
+  --tx:#1a1d24; --tx2:#5b6272; --tx3:#8a91a1;
+  --akz:#2f6fe0; --akz2:#1d59c4;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--tx);
+  font:var(--fs)/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+a{color:inherit;text-decoration:none}
+
+/* ---------- Kopfzeile ---------- */
+header{
+  position:sticky; top:0; z-index:40;
+  background:linear-gradient(var(--bg) 70%, transparent);
+  padding:14px 20px 10px;
+}
+.kopf{display:flex;gap:10px;align-items:center;max-width:1800px;margin:0 auto}
+.marke{font-weight:600;letter-spacing:.3px;color:var(--tx2);white-space:nowrap;
+  display:flex;align-items:center;gap:8px;padding-right:4px}
+.marke b{color:var(--tx)}
+.suchbox{position:relative;flex:1;min-width:140px}
+.suchbox svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--tx3)}
+#suche{
+  width:100%;padding:10px 92px 10px 38px;border-radius:var(--r);
+  background:var(--card);border:1px solid var(--line);outline:none;
+}
+#suche:focus{border-color:var(--akz);box-shadow:0 0 0 3px rgba(91,141,239,.16)}
+.suchhilfe{position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  font-size:11px;color:var(--tx3);pointer-events:none}
+.wkz{display:flex;gap:6px;align-items:center}
+.btn{
+  padding:9px 12px;border-radius:var(--r);border:1px solid var(--line);
+  background:var(--card);color:var(--tx2);white-space:nowrap;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.btn:hover{background:var(--card2);color:var(--tx);border-color:var(--line2)}
+.btn.prim{background:var(--akz);border-color:var(--akz);color:#fff}
+.btn.prim:hover{background:var(--akz2);color:#fff}
+.btn.an{background:var(--akz);border-color:var(--akz);color:#fff}
+.btn.ikon{padding:9px 10px}
+.btn:disabled{opacity:.4;cursor:default}
+
+/* Statuszeile */
+.status{max-width:1800px;margin:6px auto 0;display:flex;gap:8px;align-items:center;
+  font-size:12px;color:var(--tx3);flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:99px;
+  border:1px solid var(--line);background:var(--card)}
+.chip.warn{color:var(--warn);border-color:#4a3c20;background:#2a2318}
+.chip.ok{color:var(--ok);border-color:#1f3d32;background:#16261f}
+html[data-theme="hell"] .chip.warn{background:#fdf5e4;border-color:#e8d3a0}
+html[data-theme="hell"] .chip.ok{background:#e9f6f0;border-color:#b6dfcc}
+.punkt{width:7px;height:7px;border-radius:99px;background:currentColor}
+
+/* ---------- Raster ---------- */
+/* main-Layout siehe Bühne weiter unten */
+/* Spaltensatz wie bei Papaly: Kategorien fliessen dicht untereinander */
+#raster{ column-width:var(--spalte); column-gap:var(--sp); }
+.kat{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  overflow:hidden; break-inside:avoid; page-break-inside:avoid;
+  display:inline-block; width:100%; margin:0 0 var(--sp);
+}
+.kat.ziel{border-color:var(--akz);box-shadow:0 0 0 2px rgba(91,141,239,.2)}
+.kat-kopf{
+  display:flex;align-items:center;gap:8px;padding:9px 10px 8px;
+  border-bottom:1px solid var(--line);background:var(--card2);
+}
+.kat-farbe{width:3px;align-self:stretch;border-radius:2px;background:var(--akz);min-height:16px}
+.kat-name{font-weight:600;font-size:13px;flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kat-zahl{font-size:11px;color:var(--tx3);font-variant-numeric:tabular-nums}
+.kat-wkz{display:none;gap:2px}
+.bearbeiten .kat-wkz{display:flex}
+.mini{padding:3px 5px;border-radius:6px;color:var(--tx3);line-height:0}
+.mini:hover{background:var(--line);color:var(--tx)}
+.mini.gefahr:hover{background:#3a201c;color:var(--err)}
+.kat-liste{padding:4px;min-height:10px;display:flex;flex-direction:column}
+
+/* Link-Zeile */
+.lnk{
+  display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:7px;
+  min-width:0;position:relative;
+}
+.lnk:hover{background:var(--card2)}
+.lnk.aktiv{background:rgba(91,141,239,.18);box-shadow:inset 0 0 0 1px var(--akz)}
+.lnk.dragover{box-shadow:inset 0 2px 0 var(--akz)}
+.kachel{
+  width:18px;height:18px;border-radius:5px;flex:0 0 18px;
+  display:grid;place-items:center;font-size:10px;font-weight:700;color:#fff;
+  text-transform:uppercase;overflow:hidden;
+}
+.kachel img{width:100%;height:100%;object-fit:contain}
+.lnk-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lnk-dom{font-size:11px;color:var(--tx3);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;max-width:38%}
+.lnk-wkz{display:none;gap:1px}
+.bearbeiten .lnk:hover .lnk-wkz{display:flex}
+.leer{padding:10px;color:var(--tx3);font-size:12px;text-align:center}
+
+/* Trefferliste */
+#treffer{display:none;flex-direction:column;gap:2px;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:6px}
+#treffer .lnk{padding:7px 8px}
+.tr-kat{font-size:11px;color:var(--tx3);border:1px solid var(--line);
+  padding:1px 7px;border-radius:99px;white-space:nowrap}
+mark{background:rgba(91,141,239,.32);color:inherit;border-radius:2px;padding:0 1px}
+.websuche{display:flex;align-items:center;gap:8px;padding:9px 8px;color:var(--tx2);
+  border-top:1px solid var(--line);margin-top:4px}
+
+/* ---------- Dialoge ---------- */
+dialog{
+  border:1px solid var(--line);background:var(--bg2);color:var(--tx);
+  border-radius:14px;padding:0;width:min(520px,92vw);
+  box-shadow:0 24px 60px rgba(0,0,0,.5);
+}
+dialog[open]{display:flex;flex-direction:column;max-height:88vh}
+.dlg-body{overflow:auto}
+dialog::backdrop{background:rgba(6,8,12,.62);backdrop-filter:blur(2px)}
+.dlg-kopf{padding:16px 18px 6px;font-weight:600;font-size:15px}
+.dlg-body{padding:6px 18px 4px;display:flex;flex-direction:column;gap:11px}
+.dlg-fuss{padding:14px 18px 16px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--tx2)}
+label.f input,label.f select,label.f textarea{
+  padding:9px 10px;border-radius:8px;background:var(--card);
+  border:1px solid var(--line);outline:none;width:100%;
+}
+label.f input:focus,label.f select:focus,label.f textarea:focus{border-color:var(--akz)}
+.reihe{display:flex;gap:10px}.reihe>*{flex:1}
+.farbwahl{display:flex;gap:6px;flex-wrap:wrap}
+.farbwahl button{width:24px;height:24px;border-radius:7px;border:2px solid transparent}
+.farbwahl button[aria-checked="true"]{border-color:var(--tx)}
+.hinweis{font-size:12px;color:var(--tx3);line-height:1.5}
+.hinweis code{background:var(--card);padding:1px 5px;border-radius:4px;font-size:11px}
+.trenner{height:1px;background:var(--line);margin:4px 0}
+.zeile{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.schalter{position:relative;width:38px;height:22px;border-radius:99px;background:var(--line2);
+  flex:0 0 38px;transition:background .15s}
+.schalter[aria-checked="true"]{background:var(--akz)}
+.schalter::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;
+  border-radius:99px;background:#fff;transition:transform .15s}
+.schalter[aria-checked="true"]::after{transform:translateX(16px)}
+
+/* Toast */
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+  background:var(--card);border:1px solid var(--line2);border-radius:10px;
+  padding:10px 16px;font-size:13px;opacity:0;pointer-events:none;transition:.2s;z-index:90;
+  box-shadow:0 10px 30px rgba(0,0,0,.4)}
+#toast.zeig{opacity:1;transform:translateX(-50%) translateY(0)}
+
+
+/* ---------- Bühne: Seitenleiste + Inhalt ---------- */
+.buehne{display:flex;gap:16px;max-width:1800px;margin:0 auto;padding:0 20px;align-items:flex-start}
+aside#leiste{
+  flex:0 0 186px;width:186px;position:sticky;top:104px;
+  display:flex;flex-direction:column;gap:2px;padding-bottom:20px;
+}
+.sam{
+  display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;
+  color:var(--tx2);font-size:13px;cursor:pointer;border:1px solid transparent;
+  text-align:left;width:100%;
+}
+.sam:hover{background:var(--card);color:var(--tx)}
+.sam.an{background:var(--card);color:var(--tx);border-color:var(--line2);font-weight:600}
+.sam.ziel{border-color:var(--akz);background:rgba(91,141,239,.14);color:var(--tx)}
+.sam-ikon{width:20px;height:20px;border-radius:6px;flex:0 0 20px;display:grid;place-items:center;
+  font-size:11px;background:var(--card2);border:1px solid var(--line)}
+.sam.an .sam-ikon{background:var(--akz);border-color:var(--akz);color:#fff}
+.sam-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sam-zahl{font-size:11px;color:var(--tx3);font-variant-numeric:tabular-nums}
+.sam-wkz{display:none;gap:1px}
+.bearbeiten .sam:hover .sam-wkz{display:flex}
+.leiste-titel{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3);
+  padding:6px 9px 2px}
+.leiste-trenner{height:1px;background:var(--line);margin:6px 9px}
+main{flex:1;min-width:0;max-width:none;margin:0;padding:6px 0 130px}
+
+/* ---------- Schnellstartleiste ---------- */
+#dock{
+  position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:50;
+  display:flex;align-items:center;gap:4px;max-width:min(94vw,1100px);
+  padding:6px;border-radius:16px;overflow-x:auto;scrollbar-width:thin;
+  background:color-mix(in srgb, var(--card) 88%, transparent);
+  border:1px solid var(--line2);
+  box-shadow:0 12px 34px rgba(0,0,0,.42), 0 0 0 1px rgba(255,255,255,.02) inset;
+  backdrop-filter:blur(10px);
+}
+html[data-theme="hell"] #dock{box-shadow:0 10px 30px rgba(20,30,60,.16)}
+#dock.aus{display:none}
+#dock.ziel{border-color:var(--akz);box-shadow:0 0 0 3px rgba(91,141,239,.24)}
+.dk{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:7px 10px 6px;border-radius:11px;min-width:64px;max-width:96px;
+  color:var(--tx2);position:relative;flex:0 0 auto;
+}
+.dk:hover{background:var(--card2);color:var(--tx)}
+.dk.dragover{box-shadow:inset 2px 0 0 var(--akz)}
+.dk .kachel{width:24px;height:24px;border-radius:7px;flex:0 0 24px;font-size:12px}
+.dk-txt{font-size:10.5px;line-height:1.2;max-width:100%;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.dk-weg{position:absolute;top:1px;right:1px;display:none;line-height:0;
+  background:var(--card);border:1px solid var(--line2);border-radius:99px;padding:2px}
+.bearbeiten .dk:hover .dk-weg{display:block}
+.dock-leer{padding:8px 14px;font-size:12px;color:var(--tx3);white-space:nowrap}
+
+@media (max-width:900px){
+  .buehne{flex-direction:column;gap:8px;padding:0 12px}
+  aside#leiste{position:static;width:auto;flex:none;flex-direction:row;gap:6px;
+    overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
+  aside#leiste::-webkit-scrollbar{display:none}
+  .leiste-titel,.leiste-trenner,.sam-zahl{display:none}
+  .sam{width:auto;flex:0 0 auto;border:1px solid var(--line);background:var(--card);
+    border-radius:99px;padding:6px 12px;white-space:nowrap}
+  main{padding:2px 0 120px}
+  #dock{bottom:10px;border-radius:14px}
+  .dk{min-width:56px;padding:6px 8px 5px}
+}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (max-width:640px){
+  header{padding:10px 12px 8px}
+  .marke{display:none} .suchhilfe{display:none}
+  #btnBearbeiten,#btnSync{display:none}   /* stattdessen im Menü */
+  .nur-breit{display:none}
+  #suche{padding-right:14px}
+  .status{gap:6px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="kopf">
+    <div class="marke">★ <b>Favoriten</b></div>
+    <div class="suchbox">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="suche" type="text" placeholder="Suchen … (einfach tippen)" autocomplete="off" spellcheck="false">
+      <span class="suchhilfe" id="suchhilfe">↑↓ wählen · ⏎ öffnen</span>
+    </div>
+    <div class="wkz">
+      <button class="btn prim" id="btnNeu" title="Neuer Favorit (N)">+ Link</button>
+      <button class="btn" id="btnBearbeiten" title="Bearbeiten-Modus (E)">Bearbeiten</button>
+      <button class="btn ikon" id="btnSync" title="Jetzt abgleichen (Strg+S)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round">
+        <path d="M21 12a9 9 0 01-9 9 9 9 0 01-7.6-4.2"/><path d="M3 12a9 9 0 019-9 9 9 0 017.6 4.2"/>
+        <path d="M3 21v-5h5M21 3v5h-5"/></svg></button>
+      <button class="btn ikon" id="btnMenue" title="Menü">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button>
+    </div>
+  </div>
+  <div class="status" id="status"></div>
+</header>
+
+<div class="buehne">
+  <aside id="leiste" aria-label="Sammlungen"></aside>
+  <main>
+    <div id="treffer"></div>
+    <div id="raster"></div>
+  </main>
+</div>
+
+<nav id="dock" aria-label="Schnellstart"></nav>
+
+<div id="toast" role="status"></div>
+
+<!-- ===== Dialog: Link ===== -->
+<dialog id="dlgLink">
+  <form method="dialog">
+    <div class="dlg-kopf" id="dlgLinkTitel">Favorit</div>
+    <div class="dlg-body">
+      <label class="f">URL
+        <input id="fUrl" type="text" placeholder="https://…" required></label>
+      <label class="f">Titel
+        <input id="fTitel" type="text" placeholder="wird aus der Adresse abgeleitet"></label>
+      <div class="reihe">
+        <label class="f">Kategorie<select id="fKat"></select></label>
+        <label class="f">Schlagworte (Komma)
+          <input id="fTags" type="text" placeholder="z. B. firmware, forum"></label>
+      </div>
+      <label class="f">Notiz
+        <input id="fNotiz" type="text" placeholder="optional"></label>
+    </div>
+    <div class="dlg-fuss">
+      <button class="btn" value="abbruch" formnovalidate>Abbrechen</button>
+      <button class="btn prim" id="fLinkOk" value="ok">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===== Dialog: Kategorie ===== -->
+<dialog id="dlgKat">
+  <form method="dialog">
+    <div class="dlg-kopf" id="dlgKatTitel">Kategorie</div>
+    <div class="dlg-body">
+      <label class="f">Name<input id="kName" type="text" required></label>
+      <label class="f">Farbe<span class="farbwahl" id="kFarben"></span></label>
+    </div>
+    <div class="dlg-fuss">
+      <button class="btn" value="abbruch" formnovalidate>Abbrechen</button>
+      <button class="btn prim" value="ok">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===== Dialog: Sammlung ===== -->
+<dialog id="dlgSamm">
+  <form method="dialog">
+    <div class="dlg-kopf" id="dlgSammTitel">Sammlung</div>
+    <div class="dlg-body">
+      <div class="reihe">
+        <label class="f" style="flex:3">Name<input id="saName" type="text" required></label>
+        <label class="f" style="flex:1">Zeichen<input id="saIkon" type="text" maxlength="2" placeholder="z. B. 🏠"></label>
+      </div>
+      <div class="hinweis">Sammlungen sind die oberste Ebene: darin liegen die Kategorien,
+        darin die Links. Kategorien lassen sich im Bearbeiten-Modus per Ziehen
+        auf eine Sammlung in der Leiste verschieben.</div>
+    </div>
+    <div class="dlg-fuss">
+      <button class="btn" value="abbruch" formnovalidate>Abbrechen</button>
+      <button class="btn prim" value="ok">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===== Dialog: Menü / Einstellungen ===== -->
+<dialog id="dlgMenue">
+  <div class="dlg-kopf">Verwalten</div>
+  <div class="dlg-body">
+    <div class="zeile"><span>Bearbeiten-Modus (Umbenennen, Löschen, Sortieren)</span>
+      <button class="schalter" id="sBearb" role="switch" aria-checked="false"></button></div>
+    <div class="zeile"><span>Neue Sammlung anlegen</span>
+      <button class="btn" id="mNeueSamm">+ Sammlung</button></div>
+    <div class="zeile"><span>Neue Kategorie anlegen</span>
+      <button class="btn" id="mNeueKat">+ Kategorie</button></div>
+    <div class="trenner"></div>
+
+    <div style="font-weight:600;font-size:13px">Sicherung</div>
+    <div class="hinweis">Deine Favoriten liegen in deinem Google-Konto und auf jedem Gerät
+      im Browserspeicher. Für den Notfall kannst du jederzeit eine Kopie ziehen:
+      <code>favoriten-daten.js</code> neben eine lokale <code>index.html</code> gelegt
+      ergibt eine lauffähige Fassung ganz ohne Netz.</div>
+    <div class="zeile"><span>Sicherungskopie (<code>favoriten-daten.js</code>)</span>
+      <button class="btn" id="mExport">Herunterladen</button></div>
+    <div class="zeile"><span>Sicherungskopie als reines JSON</span>
+      <button class="btn" id="mExportJson">JSON</button></div>
+    <div class="trenner"></div>
+
+    <div style="font-weight:600;font-size:13px">Abgleich mit Handy &amp; anderen Geräten</div>
+    <div class="hinweis" id="mSyncLage"></div>
+    <label class="f">Adresse der Web-App (Apps Script, endet auf /exec)
+      <input id="syUrl" type="text" placeholder="https://script.google.com/macros/s/…/exec" spellcheck="false"></label>
+    <label class="f">Adresse der Seite fürs Handy (GitHub Pages) — nur für den Einrichtungslink
+      <input id="sySeite" type="text" placeholder="https://name.github.io/favoriten/" spellcheck="false"></label>
+    <label class="f">Token (identisch mit dem im Script)
+      <input id="syToken" type="text" placeholder="langes Zufallstoken" spellcheck="false"></label>
+    <div class="zeile"><span>Abgleich eingeschaltet</span>
+      <button class="schalter" id="syAn" role="switch" aria-checked="false"></button></div>
+    <div class="zeile">
+      <button class="btn" id="syJetzt">Jetzt abgleichen</button>
+      <button class="btn" id="syLink">Einrichtungslink fürs Handy</button>
+    </div>
+    <div class="trenner"></div>
+
+    <div style="font-weight:600;font-size:13px">Import</div>
+    <div class="zeile"><span>Papaly- oder Browser-Export (HTML / JSON)</span>
+      <button class="btn" id="mImport">Datei wählen …</button></div>
+    <input type="file" id="importDatei" accept=".html,.htm,.json,.js" class="sr">
+    <div class="trenner"></div>
+
+    <div style="font-weight:600;font-size:13px">Darstellung</div>
+    <div class="zeile"><span>Helles Design</span>
+      <button class="schalter" id="sTheme" role="switch" aria-checked="false"></button></div>
+    <div class="zeile"><span>Favicons der Seiten laden (benötigt Netz)</span>
+      <button class="schalter" id="sFavicon" role="switch" aria-checked="false"></button></div>
+    <div class="zeile"><span>Schnellstartleiste unten zeigen</span>
+      <button class="schalter" id="sDock" role="switch" aria-checked="true"></button></div>
+    <div class="zeile"><span>Adresse (Domain) anzeigen</span>
+      <button class="schalter" id="sDomain" role="switch" aria-checked="true"></button></div>
+    <div class="zeile"><span>Spaltenbreite</span>
+      <input id="sSpalte" type="range" min="200" max="440" step="10" style="flex:0 0 160px"></div>
+    <div class="zeile"><span>Links in neuem Tab öffnen</span>
+      <button class="schalter" id="sNeuerTab" role="switch" aria-checked="false"></button></div>
+    <label class="f">Websuche bei keinem Treffer
+      <select id="sSuchmaschine">
+        <option value="https://duckduckgo.com/?q=">DuckDuckGo</option>
+        <option value="https://www.google.com/search?q=">Google</option>
+        <option value="https://www.bing.com/search?q=">Bing</option>
+        <option value="https://www.startpage.com/sp/search?query=">Startpage</option>
+        <option value="">aus</option>
+      </select></label>
+  </div>
+  <div class="dlg-fuss">
+    <span class="hinweis" style="margin-right:auto" id="mZahlen"></span>
+    <button class="btn prim" id="mZu">Schließen</button>
+  </div>
+</dialog>
+
+<!-- Die Daten. Liegt als eigene Datei daneben, damit sie auch per file:// geladen wird. -->
+<script src="favoriten-daten.js"></script>
+
+<script>
+"use strict";
+/* ==========================================================================
+   Favoriten – eigene Startseite
+
+   Speichermodell:
+     Browserspeicher (Arbeitskopie, offline vollständig)
+       ←→ Apps Script im eigenen Google-Konto (Masterfassung in Drive)
+
+   Zusammengeführt wird immer pro Eintrag: gleiche id, neuerer Zeitstempel
+   gewinnt. Gelöschtes bleibt als Grabstein stehen, damit die Löschung auf
+   anderen Geräten ankommt. Dadurch kann kein Gerät den Stand eines anderen
+   überschreiben.
+
+   Liegt beim Öffnen eine favoriten-daten.js neben dieser Datei, wird sie
+   nach derselben Regel eingemischt – das ist die netzlose Notfallfassung.
+   ========================================================================== */
+
+const LS_DATEN = "favoriten.daten.v1";
+const LS_EINST = "favoriten.einst.v1";
+const GRABSTEIN_TAGE = 120;
+
+const FARBEN = ["#5b8def","#4fb286","#e0794a","#b36ad1","#d9b23c","#57b8c4",
+                "#e06a8b","#8a93a8","#7ec95e","#c9603c"];
+
+/* localStorage kann je nach Browser/Modus gesperrt sein (z. B. file:// mit
+   strengen Einstellungen). Dann arbeiten wir im Arbeitsspeicher weiter. */
+const SPEICHER = (function(){
+  const merk = {};
+  let ok = false;
+  try{ localStorage.setItem("__test__","1"); localStorage.removeItem("__test__"); ok = true; }catch(e){ ok = false; }
+  return {
+    verfuegbar: ok,
+    hol(k){ try{ return ok? localStorage.getItem(k) : (k in merk? merk[k]:null); }catch(e){ return merk[k]??null; } },
+    setz(k,v){ try{ if(ok) localStorage.setItem(k,v); else merk[k]=v; }catch(e){ merk[k]=v; throw e; } }
+  };
+})();
+
+const S = {
+  daten: leer(),
+  einst: {
+    theme:"dunkel", favicons:false, domain:true, spalte:270,
+    neuerTab:false, suchmaschine:"https://duckduckgo.com/?q=", dock:true,
+    letzteSammlung:"__alle"
+  },
+  bearbeiten:false,
+  sammlung:"__alle",        // aktive Sammlung in der Seitenleiste
+  bearbeiteSamm:null,
+  treffer:[],
+  auswahl:-1,
+  drag:null,
+  bearbeiteLink:null,
+  bearbeiteKat:null,
+  sync:{ an:false, url:"", token:"", seite:"", cursor:0, letzterPush:0, letzterOk:0,
+         laeuft:false, fehler:"" }
+};
+
+/* ---------------------------- Hilfsmittel ------------------------------- */
+function $(s,w){ return (w||document).querySelector(s); }
+function $$(s,w){ return Array.from((w||document).querySelectorAll(s)); }
+function jetzt(){ return Date.now(); }
+function uid(p){ return p+"_"+Math.random().toString(36).slice(2,9)+jetzt().toString(36).slice(-4); }
+function leer(){ return { schema:2, updatedAt:jetzt(), geraet:geraetName(), sammlungen:[], kategorien:[], dock:[] }; }
+function geraetName(){
+  let g = SPEICHER.hol("favoriten.geraet");
+  if(!g){ g = "geraet-"+Math.random().toString(36).slice(2,6);
+          try{ SPEICHER.setz("favoriten.geraet",g); }catch(e){} }
+  return g;
+}
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function domain(url){ try{ return new URL(url).hostname.replace(/^www\./,""); }catch(e){ return ""; } }
+function farbeFuer(t){ let h=0; for(let i=0;i<t.length;i++) h=(h*31+t.charCodeAt(i))>>>0; return FARBEN[h%FARBEN.length]; }
+function toast(t){ const e=$("#toast"); e.textContent=t; e.classList.add("zeig");
+  clearTimeout(toast._t); toast._t=setTimeout(()=>e.classList.remove("zeig"),2200); }
+
+/* ---------------------- Normalisieren & Zusammenführen ------------------- */
+function normalisiere(d){
+  const o = { schema:2, updatedAt:+d?.updatedAt||0, geraet:d?.geraet||"",
+              sammlungen:[], kategorien:[], dock:[] };
+
+  for(const sa of (d?.sammlungen||[])){
+    if(!sa) continue;
+    o.sammlungen.push({
+      id: sa.id || uid("sam"),
+      name: String(sa.name||"Ohne Namen"),
+      ikon: String(sa.ikon||"").slice(0,3),
+      order: Number.isFinite(+sa.order)? +sa.order : 0,
+      updatedAt: +sa.updatedAt || o.updatedAt || jetzt(),
+      deleted: !!sa.deleted
+    });
+  }
+
+  for(const dk of (d?.dock||[])){
+    if(!dk || !dk.url) continue;
+    o.dock.push({
+      id: dk.id || uid("dck"),
+      titel: String(dk.titel||dk.title||dk.url),
+      url: String(dk.url),
+      order: Number.isFinite(+dk.order)? +dk.order : 0,
+      updatedAt: +dk.updatedAt || o.updatedAt || jetzt(),
+      deleted: !!dk.deleted
+    });
+  }
+
+  for(const k of (d?.kategorien||d?.categories||[])){
+    if(!k) continue;
+    const kk = {
+      id: k.id || uid("cat"),
+      name: String(k.name||"Ohne Namen"),
+      farbe: k.farbe || k.color || FARBEN[0],
+      sammlungId: k.sammlungId || "",
+      order: Number.isFinite(+k.order)? +k.order : 0,
+      updatedAt: +k.updatedAt || o.updatedAt || jetzt(),
+      deleted: !!k.deleted,
+      links: []
+    };
+    for(const l of (k.links||[])){
+      if(!l || !l.url) continue;
+      kk.links.push({
+        id: l.id || uid("lnk"),
+        titel: String(l.titel||l.title||l.url),
+        url: String(l.url),
+        notiz: String(l.notiz||l.note||""),
+        tags: Array.isArray(l.tags)? l.tags.map(String) : [],
+        order: Number.isFinite(+l.order)? +l.order : 0,
+        updatedAt: +l.updatedAt || kk.updatedAt,
+        deleted: !!l.deleted
+      });
+    }
+    o.kategorien.push(kk);
+  }
+  migriere(o);
+  return o;
+}
+
+/* Ältere Dateien kennen noch keine Sammlungen: alles kommt in „Allgemein“. */
+const STANDARD_SAMMLUNG = "sam_allgemein";
+function migriere(o){
+  const ohne = o.kategorien.filter(k => !k.sammlungId);
+  const brauchtStandard = ohne.length > 0;
+  if(brauchtStandard && !o.sammlungen.some(s=>s.id===STANDARD_SAMMLUNG)){
+    o.sammlungen.unshift({ id:STANDARD_SAMMLUNG, name:"Allgemein", ikon:"",
+      order:-1, updatedAt:o.updatedAt||jetzt(), deleted:false });
+  }
+  for(const k of ohne) k.sammlungId = STANDARD_SAMMLUNG;
+  return o;
+}
+
+/* Einfache Listen (Sammlungen, Dock): je id gewinnt der neuere Zeitstempel. */
+function listeMischen(la, lb){
+  const m = new Map();
+  for(const e of (la||[]).concat(lb||[])){
+    const v = m.get(e.id);
+    if(!v || e.updatedAt > v.updatedAt) m.set(e.id, {...e});
+  }
+  return Array.from(m.values()).sort((x,y)=>x.order-y.order);
+}
+
+/* Führt zwei Datenstände zusammen. Pro Eintrag gewinnt der neuere Zeitstempel. */
+function zusammenfuehren(a, b){
+  a = normalisiere(a); b = normalisiere(b);
+  const kats = new Map();
+  const linkHeimat = new Map();   // linkId -> {katId, updatedAt}
+
+  for(const quelle of [a,b]){
+    for(const k of quelle.kategorien){
+      let z = kats.get(k.id);
+      if(!z){
+        z = { id:k.id, name:k.name, farbe:k.farbe, order:k.order, sammlungId:k.sammlungId,
+              updatedAt:k.updatedAt, deleted:k.deleted, links:new Map() };
+        kats.set(k.id, z);
+      } else if(k.updatedAt > z.updatedAt){
+        z.name=k.name; z.farbe=k.farbe; z.order=k.order; z.sammlungId=k.sammlungId;
+        z.deleted=k.deleted; z.updatedAt=k.updatedAt;
+      }
+      for(const l of k.links){
+        const heim = linkHeimat.get(l.id);
+        if(!heim || l.updatedAt > heim.updatedAt){
+          linkHeimat.set(l.id, {katId:k.id, updatedAt:l.updatedAt});
+        }
+        const vorhanden = z.links.get(l.id);
+        if(!vorhanden || l.updatedAt > vorhanden.updatedAt) z.links.set(l.id, {...l});
+      }
+    }
+  }
+  // Ein Link kann verschoben worden sein: nur in seiner neuesten Heimat behalten
+  for(const [katId, z] of kats){
+    for(const id of Array.from(z.links.keys())){
+      const heim = linkHeimat.get(id);
+      if(heim && heim.katId !== katId) z.links.delete(id);
+    }
+  }
+  const out = { schema:2, updatedAt:Math.max(a.updatedAt,b.updatedAt), geraet:geraetName(),
+                sammlungen: listeMischen(a.sammlungen, b.sammlungen),
+                kategorien: [],
+                dock: listeMischen(a.dock, b.dock) };
+  for(const z of kats.values()){
+    out.kategorien.push({ id:z.id, name:z.name, farbe:z.farbe, sammlungId:z.sammlungId, order:z.order,
+      updatedAt:z.updatedAt, deleted:z.deleted,
+      links:Array.from(z.links.values()).sort((x,y)=>x.order-y.order) });
+  }
+  out.kategorien.sort((x,y)=>x.order-y.order);
+  migriere(out);
+  return out;
+}
+
+/* Alte Grabsteine entfernen, damit die Datei nicht endlos wächst */
+function aufraeumen(d){
+  const grenze = jetzt() - GRABSTEIN_TAGE*864e5;
+  d.kategorien = d.kategorien.filter(k => !(k.deleted && k.updatedAt < grenze));
+  for(const k of d.kategorien) k.links = k.links.filter(l => !(l.deleted && l.updatedAt < grenze));
+  d.sammlungen = (d.sammlungen||[]).filter(x => !(x.deleted && x.updatedAt < grenze));
+  d.dock = (d.dock||[]).filter(x => !(x.deleted && x.updatedAt < grenze));
+  return d;
+}
+
+const alleKats    = ()=> S.daten.kategorien.filter(k=>!k.deleted).sort((a,b)=>a.order-b.order);
+const aktiveKats  = ()=> alleKats().filter(k => S.sammlung==="__alle" || k.sammlungId===S.sammlung);
+const aktiveSamm  = ()=> (S.daten.sammlungen||[]).filter(x=>!x.deleted).sort((a,b)=>a.order-b.order);
+const aktivesDock = ()=> (S.daten.dock||[]).filter(x=>!x.deleted).sort((a,b)=>a.order-b.order);
+const findeSamm   = id => (S.daten.sammlungen||[]).find(x=>x.id===id);
+const aktiveLinks = k => (k.links||[]).filter(l=>!l.deleted).sort((a,b)=>a.order-b.order);
+const findeKat    = id => S.daten.kategorien.find(k=>k.id===id);
+function findeLink(id){
+  for(const k of S.daten.kategorien){ const l=(k.links||[]).find(x=>x.id===id); if(l) return {kat:k, link:l}; }
+  return null;
+}
+</script>
+
+<script>
+"use strict";
+/* ========================= Speichern & Laden ============================= */
+
+/* --- localStorage: Arbeitskopie, immer und offline verfügbar --- */
+function lokalLaden(){
+  try{ const r = SPEICHER.hol(LS_DATEN); return r? JSON.parse(r):null; }catch(e){ return null; }
+}
+function lokalSichern(){
+  try{ SPEICHER.setz(LS_DATEN, JSON.stringify(S.daten)); }
+  catch(e){ toast("Browserspeicher nicht verfügbar – bitte eine Sicherungskopie ziehen."); }
+}
+function einstLaden(){
+  try{ Object.assign(S.einst, JSON.parse(SPEICHER.hol(LS_EINST)||"{}")); }catch(e){}
+}
+function einstSichern(){
+  try{ SPEICHER.setz(LS_EINST, JSON.stringify(S.einst)); }catch(e){}
+}
+
+/* --- Sicherungsdatei: Textform --- */
+function serialisiere(d){
+  const kopf =
+"/* ============================================================\n"+
+"   favoriten-daten.js  —  Sicherungskopie der Favoriten\n"+
+"   Geschrieben am "+new Date().toLocaleString("de-DE")+" von "+d.geraet+"\n"+
+"   Liegt diese Datei neben index.html, wird sie beim Öffnen\n"+
+"   gelesen und mit dem vorhandenen Stand zusammengeführt.\n"+
+"   Handarbeit ist erlaubt, solange gültiges JSON innerhalb\n"+
+"   der Zuweisung stehen bleibt.\n"+
+"   ============================================================ */\n";
+  return kopf + "window.FAVORITEN_DATEN = " + JSON.stringify(d, null, 2) + ";\n";
+}
+
+/* Liest sowohl "window.FAVORITEN_DATEN = {...};" als auch reines JSON */
+function ausTextLesen(txt){
+  try{
+    const i = txt.indexOf("{"), j = txt.lastIndexOf("}");
+    if(i<0||j<0) return null;
+    return normalisiere(JSON.parse(txt.slice(i, j+1)));
+  }catch(e){ return null; }
+}
+
+function herunterladen(name, text, typ){
+  const b = new Blob([text], {type: typ||"text/plain;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+}
+
+/* Jede Änderung: sofort in den Browserspeicher, dann in den Abgleich. */
+function geaendert(){
+  S.daten.updatedAt = jetzt();
+  lokalSichern();
+  statusZeichnen();
+  if(typeof syncAnstossen === "function") syncAnstossen();
+}
+</script>
+
+<script>
+"use strict";
+/* ======================= Abgleich über Apps Script ======================= */
+/*
+   Protokoll: das Gerät schickt nur die Einträge, deren Zeitstempel neuer ist
+   als der letzte erfolgreiche Push, und seinen Cursor (die zuletzt gesehene
+   Serverrevision). Das Script mischt die Einträge in die Drive-Datei und
+   schickt zurück, was seit dem Cursor dazugekommen ist. Ganze Dateien werden
+   nie überschrieben - deshalb kann kein Gerät den Stand eines anderen löschen.
+*/
+const LS_SYNC = "favoriten.sync.v1";
+const SYNC_TAKT = 4*60*1000;      // Hintergrundabgleich
+const UEBERLAPPUNG = 120000;      // Sicherheitspuffer gegen Uhrenabweichung
+
+function syncLaden(){
+  try{ Object.assign(S.sync, JSON.parse(SPEICHER.hol(LS_SYNC)||"{}")); }catch(e){}
+}
+function syncSichern(){
+  try{ SPEICHER.setz(LS_SYNC, JSON.stringify({
+    an:S.sync.an, url:S.sync.url, token:S.sync.token, seite:S.sync.seite,
+    cursor:S.sync.cursor, letzterPush:S.sync.letzterPush, letzterOk:S.sync.letzterOk
+  })); }catch(e){}
+}
+
+/* Lokale Änderungen seit <seit> als flache Listen */
+function deltaSammeln(seit){
+  const d = { sammlungen:[], kategorien:[], links:[], dock:[] };
+  for(const x of (S.daten.sammlungen||[])) if(x.updatedAt > seit) d.sammlungen.push({...x});
+  for(const x of (S.daten.dock||[]))       if(x.updatedAt > seit) d.dock.push({...x});
+  for(const k of S.daten.kategorien){
+    const {links, ...meta} = k;
+    if(k.updatedAt > seit) d.kategorien.push({...meta});
+    for(const l of (links||[])) if(l.updatedAt > seit) d.links.push({...l, katId:k.id});
+  }
+  return d;
+}
+
+/* Eingehende Einträge übernehmen – je id gewinnt der neuere Zeitstempel */
+function deltaEinspielen(delta){
+  const t = x => +x?.updatedAt || 0;
+  let n = 0;
+
+  for(const e of (delta.sammlungen||[])){
+    const alt = (S.daten.sammlungen||[]).find(x=>x.id===e.id);
+    if(!alt){ S.daten.sammlungen.push({...e}); n++; }
+    else if(t(e) > t(alt)){ Object.assign(alt, e); n++; }
+  }
+  for(const e of (delta.dock||[])){
+    const alt = (S.daten.dock||[]).find(x=>x.id===e.id);
+    if(!alt){ S.daten.dock.push({...e}); n++; }
+    else if(t(e) > t(alt)){ Object.assign(alt, e); n++; }
+  }
+  for(const e of (delta.kategorien||[])){
+    const alt = findeKat(e.id);
+    if(!alt){ S.daten.kategorien.push({...e, links:[]}); n++; }
+    else if(t(e) > t(alt)){ const behalten = alt.links; Object.assign(alt, e); alt.links = behalten; n++; }
+  }
+  for(const e of (delta.links||[])){
+    const katId = e.katId;
+    const {katId:_weg, ...rein} = e;
+    let ziel = findeKat(katId);
+    if(!ziel){
+      /* Sollte nicht vorkommen; lieber eine Ersatzkategorie als ein verlorener Link. */
+      ziel = { id:katId, name:"Wiederhergestellt", farbe:FARBEN[0],
+               sammlungId:(aktiveSamm()[0]||{}).id||STANDARD_SAMMLUNG,
+               order:999, updatedAt:0, deleted:false, links:[] };
+      S.daten.kategorien.push(ziel);
+    }
+    const vorhanden = findeLink(e.id);
+    if(vorhanden){
+      if(t(e) <= t(vorhanden.link)) continue;
+      vorhanden.kat.links = vorhanden.kat.links.filter(x=>x.id!==e.id);
+    }
+    ziel.links.push(rein);
+    n++;
+  }
+  if(n){
+    migriere(S.daten);
+    for(const k of S.daten.kategorien) k.links.sort((a,b)=>a.order-b.order);
+    S.daten.kategorien.sort((a,b)=>a.order-b.order);
+  }
+  return n;
+}
+
+async function syncJetzt(still){
+  if(!S.sync.an || !S.sync.url || !S.sync.token){
+    if(!still) toast("Abgleich ist nicht eingerichtet.");
+    return false;
+  }
+  if(S.sync.laeuft) return false;
+  if(navigator.onLine === false){
+    S.sync.fehler = "kein Netz"; statusZeichnen();
+    if(!still) toast("Kein Netz – der Abgleich läuft nach, sobald wieder Verbindung da ist.");
+    return false;
+  }
+  S.sync.laeuft = true; statusZeichnen();
+  try{
+    const seit = Math.max(0, (S.sync.letzterPush||0) - UEBERLAPPUNG);
+    const koerper = JSON.stringify({
+      token: S.sync.token, geraet: geraetName(),
+      cursor: S.sync.cursor||0, aenderungen: deltaSammeln(seit)
+    });
+    /* Bewusst ohne eigene Header: so bleibt es eine einfache Anfrage
+       ohne Vorabprüfung, die Apps Script unverändert beantwortet. */
+    const r = await fetch(S.sync.url, { method:"POST", body:koerper, redirect:"follow" });
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const j = JSON.parse(await r.text());
+    if(!j.ok) throw new Error(j.fehler==="token" ? "Token stimmt nicht" : (j.fehler||"unbekannt"));
+
+    const n = deltaEinspielen(j.aenderungen||{});
+    S.sync.cursor = j.cursor;
+    S.sync.letzterPush = jetzt();
+    S.sync.letzterOk = jetzt();
+    S.sync.fehler = "";
+    syncSichern();
+    if(n){ lokalSichern(); zeichnen(); }
+    if(!still) toast(n ? n+" Änderung(en) übernommen." : "Alles aktuell.");
+    return true;
+  }catch(e){
+    const m = String(e && e.message || e);
+    S.sync.fehler = /failed to fetch|networkerror|load failed/i.test(m)
+      ? "kein Netz" : (m==="belegt" ? "gerade belegt" : m);
+    syncSichern();
+    if(!still) toast("Abgleich fehlgeschlagen: "+S.sync.fehler);
+    if(S.sync.fehler==="kein Netz") S.sync.nachholen = true;
+    return false;
+  } finally {
+    S.sync.laeuft = false; statusZeichnen();
+  }
+}
+
+let syncTimer = null;
+function syncAnstossen(){
+  if(!S.sync.an) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(()=>syncJetzt(true), 3500);
+}
+
+/* Einrichtungslink fürs zweite Gerät: die Zugangsdaten stehen hinter dem
+   Rautezeichen und werden deshalb nie an einen Server geschickt. */
+function syncLinkBauen(){
+  let basis = (S.sync.seite||"").trim() || location.href.split("#")[0];
+  if(basis && !/[#?]/.test(basis) && !/\.html?$/i.test(basis) && !basis.endsWith("/")) basis += "/";
+  const nutz = btoa(unescape(encodeURIComponent(JSON.stringify({u:S.sync.url, t:S.sync.token}))))
+                 .replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  return basis + "#s=" + nutz;
+}
+function syncAusHash(){
+  const h = location.hash || "";
+  const m = h.match(/^#s=([A-Za-z0-9\-_]+)$/);
+  if(!m) return false;
+  try{
+    const roh = m[1].replace(/-/g,"+").replace(/_/g,"/");
+    const o = JSON.parse(decodeURIComponent(escape(atob(roh))));
+    if(!o.u || !o.t) return false;
+    S.sync.url = o.u; S.sync.token = o.t; S.sync.an = true;
+    S.sync.cursor = 0; S.sync.letzterPush = 0;
+    syncSichern();
+    try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){}
+    toast("Abgleich eingerichtet – hole Daten …");
+    return true;
+  }catch(e){ return false; }
+}
+
+function syncText(){
+  if(!S.sync.an) return "";
+  if(S.sync.laeuft) return "Abgleich läuft …";
+  if(S.sync.fehler) return "Abgleich: "+S.sync.fehler;
+  if(!S.sync.letzterOk) return "Abgleich bereit";
+  const min = Math.round((jetzt()-S.sync.letzterOk)/60000);
+  return "Abgleich: " + (min<1? "gerade eben" : "vor "+min+" min");
+}
+</script>
+
+<script>
+"use strict";
+/* ============================== Darstellung ============================== */
+
+function kachelHtml(l){
+  const d = domain(l.url);
+  const f = farbeFuer(d||l.titel);
+  const buchstabe = esc((l.titel||d||"?").trim().charAt(0));
+  if(S.einst.favicons && d){
+    return '<span class="kachel" style="background:'+f+'">'+
+      '<img src="https://icons.duckduckgo.com/ip3/'+esc(d)+'.ico" alt="" loading="lazy" '+
+      'onerror="this.remove()">'+
+      '</span>';
+  }
+  return '<span class="kachel" style="background:'+f+'">'+buchstabe+'</span>';
+}
+
+function linkHtml(l, katId, mitKat){
+  const d = domain(l.url);
+  return '<a class="lnk" draggable="true" data-link="'+esc(l.id)+'" data-kat="'+esc(katId)+'" '+
+    'href="'+esc(l.url)+'" title="'+esc(l.titel+(l.notiz? " — "+l.notiz:"")+"\n"+l.url)+'"'+
+    (S.einst.neuerTab? ' target="_blank" rel="noopener"':'')+'>'+
+    kachelHtml(l)+
+    '<span class="lnk-txt">'+esc(l.titel)+'</span>'+
+    (mitKat? '<span class="tr-kat">'+esc(mitKat)+'</span>':'')+
+    (S.einst.domain? '<span class="lnk-dom">'+esc(d)+'</span>':'')+
+    '<span class="lnk-wkz">'+
+      '<button class="mini" data-tat="link-bearb" title="Bearbeiten">'+ikone("stift")+'</button>'+
+      '<button class="mini gefahr" data-tat="link-weg" title="Löschen">'+ikone("muell")+'</button>'+
+    '</span></a>';
+}
+
+function ikone(n){
+  const p = {
+    stift:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>',
+    muell:'<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',
+    plus :'<path d="M12 5v14M5 12h14"/>',
+    kreuz:'<path d="M18 6L6 18M6 6l12 12"/>'
+  }[n];
+  return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">'+p+'</svg>';
+}
+
+function sammlungsName(k){
+  const sa = findeSamm(k.sammlungId);
+  return (sa && aktiveSamm().length>1)? sa.name+" · " : "";
+}
+
+/* ---------- Seitenleiste: Sammlungen ---------- */
+function leisteZeichnen(){
+  const sam = aktiveSamm();
+  const alle = alleKats();
+  const zahl = id => alle.filter(k=>k.sammlungId===id)
+                        .reduce((n,k)=>n+aktiveLinks(k).length,0);
+  const eintrag = (id,name,ikon,anz,werkzeug)=>
+    '<div class="sam'+(S.sammlung===id?" an":"")+'" role="button" tabindex="0" data-sam="'+esc(id)+'"'+
+      (werkzeug? ' draggable="'+(S.bearbeiten?"true":"false")+'"':'')+'>'+
+      '<span class="sam-ikon">'+esc(ikon|| name.charAt(0).toUpperCase())+'</span>'+
+      '<span class="sam-name">'+esc(name)+'</span>'+
+      '<span class="sam-zahl">'+anz+'</span>'+
+      (werkzeug? '<span class="sam-wkz">'+
+        '<button class="mini" data-tat="sam-bearb" title="Umbenennen">'+ikone("stift")+'</button>'+
+        '<button class="mini gefahr" data-tat="sam-weg" title="Löschen">'+ikone("muell")+'</button>'+
+      '</span>':'')+
+    '</div>';
+
+  let html = '<div class="leiste-titel">Sammlungen</div>';
+  html += eintrag("__alle","Alle","≡", alle.reduce((n,k)=>n+aktiveLinks(k).length,0), false);
+  html += sam.map(x=> eintrag(x.id, x.name, x.ikon, zahl(x.id), true)).join("");
+  html += '<div class="leiste-trenner"></div>';
+  html += '<div class="sam" role="button" tabindex="0" data-tat="sam-neu">'+
+          '<span class="sam-ikon">+</span><span class="sam-name">Neue Sammlung</span></div>';
+  $("#leiste").innerHTML = html;
+}
+
+/* ---------- Schnellstartleiste ---------- */
+function dockZeichnen(){
+  const d = $("#dock");
+  d.classList.toggle("aus", !S.einst.dock);
+  const eintraege = aktivesDock();
+  if(!eintraege.length){
+    d.innerHTML = '<div class="dock-leer">Links hierher ziehen für den Schnellstart</div>';
+    return;
+  }
+  d.innerHTML = eintraege.map(e=>
+    '<a class="dk" draggable="true" data-dock="'+esc(e.id)+'" href="'+esc(e.url)+'" '+
+      'title="'+esc(e.titel+"\n"+e.url)+'"'+(S.einst.neuerTab? ' target="_blank" rel="noopener"':'')+'>'+
+      kachelHtml(e)+
+      '<span class="dk-txt">'+esc(e.titel)+'</span>'+
+      '<button class="mini gefahr dk-weg" data-tat="dock-weg" title="Aus der Leiste entfernen">'+
+        ikone("kreuz")+'</button>'+
+    '</a>').join("");
+}
+
+function zeichnen(){
+  const raster = $("#raster");
+  raster.innerHTML = aktiveKats().map(k=>{
+    const links = aktiveLinks(k);
+    return '<section class="kat" data-kat="'+esc(k.id)+'">'+
+      '<header class="kat-kopf" draggable="'+(S.bearbeiten?"true":"false")+'">'+
+        '<span class="kat-farbe" style="background:'+esc(k.farbe)+'"></span>'+
+        '<span class="kat-name">'+esc(k.name)+'</span>'+
+        '<span class="kat-zahl">'+links.length+'</span>'+
+        '<span class="kat-wkz">'+
+          '<button class="mini" data-tat="kat-neu" title="Link in diese Kategorie">'+ikone("plus")+'</button>'+
+          '<button class="mini" data-tat="kat-bearb" title="Kategorie bearbeiten">'+ikone("stift")+'</button>'+
+          '<button class="mini gefahr" data-tat="kat-weg" title="Kategorie löschen">'+ikone("muell")+'</button>'+
+        '</span>'+
+      '</header>'+
+      '<div class="kat-liste">'+
+        (links.length? links.map(l=>linkHtml(l,k.id)).join("")
+                     : '<div class="leer">leer</div>')+
+      '</div></section>';
+  }).join("");
+  if(!aktiveKats().length){
+    raster.innerHTML = '<div class="leer" style="padding:40px">'+
+      (S.sammlung==="__alle"? "Noch keine Kategorien."
+       : "Diese Sammlung ist leer. Im Bearbeiten-Modus lassen sich Kategorien per Ziehen hierher verschieben.")+
+      '</div>';
+  }
+  document.body.classList.toggle("bearbeiten", S.bearbeiten);
+  document.documentElement.style.setProperty("--spalte", S.einst.spalte+"px");
+  document.documentElement.dataset.theme = S.einst.theme;
+  leisteZeichnen();
+  dockZeichnen();
+  statusZeichnen();
+}
+
+function statusZeichnen(){
+  const kats = aktiveKats();
+  const anzahl = alleKats().reduce((s,k)=>s+aktiveLinks(k).length,0);
+  const teile = [];
+
+  if(S.sync.an){
+    const art = S.sync.fehler ? " warn" : (S.sync.laeuft ? "" : " ok");
+    teile.push('<span class="chip'+art+'"><span class="punkt"></span>'+esc(syncText())+'</span>');
+  } else {
+    teile.push('<span class="chip warn"><span class="punkt"></span>'+
+      'Abgleich nicht eingerichtet – nur auf diesem Gerät</span>');
+  }
+  if(navigator.onLine === false){
+    teile.push('<span class="chip">offline – Suche und Ändern gehen trotzdem</span>');
+  }
+  teile.push('<span class="nur-breit">'+anzahl+' Links in '+alleKats().length+' Kategorien</span>');
+
+  $("#status").innerHTML = teile.join("");
+  const mz = $("#mZahlen"); if(mz) mz.textContent = anzahl+" Links · "+alleKats().length+" Kategorien";
+}
+
+/* ================================ Suche ================================== */
+function suchen(q){
+  q = q.trim().toLowerCase();
+  if(!q){ S.treffer=[]; $("#treffer").style.display="none"; $("#raster").style.display=""; return; }
+  const worte = q.split(/\s+/);
+  const erg = [];
+  for(const k of alleKats()){
+    for(const l of aktiveLinks(k)){
+      const titel = l.titel.toLowerCase();
+      const dom   = domain(l.url).toLowerCase();
+      const heu   = titel+" "+l.url.toLowerCase()+" "+l.tags.join(" ").toLowerCase()+
+                    " "+l.notiz.toLowerCase()+" "+k.name.toLowerCase();
+      if(!worte.every(w=>heu.includes(w))) continue;
+      let punkte = 0;
+      const w0 = worte[0];
+      if(titel.startsWith(w0)) punkte += 100;
+      else if(titel.includes(w0)) punkte += 60;
+      if(dom.startsWith(w0)) punkte += 50; else if(dom.includes(w0)) punkte += 25;
+      if(l.tags.some(t=>t.toLowerCase().startsWith(w0))) punkte += 30;
+      punkte -= Math.min(titel.length,40)/10;
+      erg.push({link:l, kat:k, punkte});
+    }
+  }
+  erg.sort((a,b)=>b.punkte-a.punkte);
+  S.treffer = erg.slice(0,60);
+  S.auswahl = S.treffer.length? 0 : -1;
+  trefferZeichnen(q);
+}
+
+function markiere(text, q){
+  const worte = q.trim().split(/\s+/).filter(Boolean);
+  let h = esc(text);
+  for(const w of worte){
+    if(!w) continue;
+    const re = new RegExp("("+w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","ig");
+    h = h.replace(re,"<mark>$1</mark>");
+  }
+  return h;
+}
+
+function trefferZeichnen(q){
+  const box = $("#treffer");
+  $("#raster").style.display = "none";
+  box.style.display = "flex";
+  let html = S.treffer.map((t,i)=>{
+    const d = domain(t.link.url);
+    return '<a class="lnk'+(i===S.auswahl?" aktiv":"")+'" data-i="'+i+'" data-link="'+esc(t.link.id)+'" '+
+      'href="'+esc(t.link.url)+'"'+(S.einst.neuerTab? ' target="_blank" rel="noopener"':'')+'>'+
+      kachelHtml(t.link)+
+      '<span class="lnk-txt">'+markiere(t.link.titel,q)+'</span>'+
+      '<span class="tr-kat">'+esc(sammlungsName(t.kat))+esc(t.kat.name)+'</span>'+
+      '<span class="lnk-dom">'+esc(d)+'</span></a>';
+  }).join("");
+  if(!S.treffer.length) html = '<div class="leer">kein Favorit passt zu „'+esc(q)+'“</div>';
+  if(S.einst.suchmaschine){
+    html += '<div class="websuche">'+
+      '<span class="kachel" style="background:var(--tx3)">?</span>'+
+      '<span class="lnk-txt">Im Web suchen nach „'+esc(q)+'“</span>'+
+      '<span class="tr-kat">⏎ wenn nichts markiert</span></div>';
+  }
+  box.innerHTML = html;
+}
+
+function auswahlBewegen(d){
+  if(!S.treffer.length) return;
+  S.auswahl = (S.auswahl + d + S.treffer.length + 1) % (S.treffer.length + 1);
+  $$("#treffer .lnk").forEach((e,i)=>e.classList.toggle("aktiv", i===S.auswahl));
+  const a = $("#treffer .lnk.aktiv"); if(a) a.scrollIntoView({block:"nearest"});
+}
+
+function oeffne(url, neuerTab){
+  if(neuerTab || S.einst.neuerTab) window.open(url,"_blank","noopener");
+  else location.href = url;
+}
+function trefferOeffnen(neuerTab){
+  const q = $("#suche").value.trim();
+  if(S.auswahl>=0 && S.treffer[S.auswahl]) return oeffne(S.treffer[S.auswahl].link.url, neuerTab);
+  if(q && S.einst.suchmaschine) return oeffne(S.einst.suchmaschine+encodeURIComponent(q), neuerTab);
+}
+</script>
+
+<script>
+"use strict";
+/* ============================ Bearbeiten ================================= */
+
+function bestaetige(text, okText){
+  return new Promise(res=>{
+    const d = document.createElement("dialog");
+    d.innerHTML = '<div class="dlg-kopf">Bitte bestätigen</div>'+
+      '<div class="dlg-body"><div class="hinweis">'+esc(text)+'</div></div>'+
+      '<div class="dlg-fuss"><button class="btn" data-w="0">Abbrechen</button>'+
+      '<button class="btn prim" data-w="1">'+esc(okText||"Löschen")+'</button></div>';
+    document.body.appendChild(d);
+    d.addEventListener("click", e=>{
+      const b = e.target.closest("button[data-w]"); if(!b) return;
+      d.close(); d.remove(); res(b.dataset.w==="1");
+    });
+    d.addEventListener("cancel", ()=>{ d.remove(); res(false); });
+    d.showModal();
+  });
+}
+
+function frageText(titel, vorgabe){
+  return new Promise(res=>{
+    const d = document.createElement("dialog");
+    d.innerHTML = '<div class="dlg-kopf">'+esc(titel)+'</div>'+
+      '<div class="dlg-body"><label class="f">Name<input id="__ft" type="text" value="'+esc(vorgabe||"")+'"></label></div>'+
+      '<div class="dlg-fuss"><button class="btn" data-w="0">Abbrechen</button>'+
+      '<button class="btn prim" data-w="1">Anlegen</button></div>';
+    document.body.appendChild(d);
+    const fertig = ok => { const v = d.querySelector("#__ft").value.trim(); d.close(); d.remove(); res(ok? (v||null) : null); };
+    d.addEventListener("click", e=>{ const b=e.target.closest("button[data-w]"); if(b) fertig(b.dataset.w==="1"); });
+    d.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); fertig(true); } });
+    d.addEventListener("cancel", ()=>{ d.remove(); res(null); });
+    d.showModal(); setTimeout(()=>d.querySelector("#__ft").focus(),30);
+  });
+}
+
+function katAuswahlFuellen(sel, aktiv){
+  sel.innerHTML = aktiveKats().map(k=>
+    '<option value="'+esc(k.id)+'"'+(k.id===aktiv?" selected":"")+'>'+esc(k.name)+'</option>').join("")
+    + '<option value="__neu">＋ neue Kategorie …</option>';
+}
+
+function linkDialog(linkId, katId){
+  const f = linkId? findeLink(linkId) : null;
+  S.bearbeiteLink = f? f.link.id : null;
+  $("#dlgLinkTitel").textContent = f? "Favorit bearbeiten" : "Neuer Favorit";
+  $("#fUrl").value   = f? f.link.url   : "";
+  $("#fTitel").value = f? f.link.titel : "";
+  $("#fNotiz").value = f? f.link.notiz : "";
+  $("#fTags").value  = f? f.link.tags.join(", ") : "";
+  katAuswahlFuellen($("#fKat"), f? f.kat.id : (katId || (aktiveKats()[0]||{}).id));
+  $("#dlgLink").showModal();
+  setTimeout(()=>$( f? "#fTitel" : "#fUrl").focus(), 30);
+}
+
+async function linkSpeichernAusDialog(){
+  let url = $("#fUrl").value.trim();
+  if(!url) return;
+  if(!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = "https://"+url;
+  let titel = $("#fTitel").value.trim() || domain(url) || url;
+  const notiz = $("#fNotiz").value.trim();
+  const tags  = $("#fTags").value.split(",").map(s=>s.trim()).filter(Boolean);
+  let katId = $("#fKat").value;
+  if(katId==="__neu"){
+    const name = await frageText("Neue Kategorie");
+    if(!name) return;
+    katId = katAnlegen(name);
+  }
+  if(S.bearbeiteLink){
+    const f = findeLink(S.bearbeiteLink);
+    if(f){
+      Object.assign(f.link,{url,titel,notiz,tags,updatedAt:jetzt()});
+      if(f.kat.id!==katId){ linkVerschieben(f.link.id, katId, null); return; }
+    }
+  } else {
+    const k = findeKat(katId); if(!k) return;
+    const order = k.links.filter(l=>!l.deleted).length;
+    k.links.push({id:uid("lnk"), titel, url, notiz, tags, order, updatedAt:jetzt(), deleted:false});
+  }
+  geaendert(); zeichnen();
+}
+
+function katAnlegen(name, farbe){
+  const id = uid("cat");
+  const sam = (S.sammlung !== "__alle" && findeSamm(S.sammlung))
+              ? S.sammlung
+              : ((aktiveSamm()[0]||{}).id || STANDARD_SAMMLUNG);
+  if(!findeSamm(sam)){
+    S.daten.sammlungen.push({ id:STANDARD_SAMMLUNG, name:"Allgemein", ikon:"",
+      order:0, updatedAt:jetzt(), deleted:false });
+  }
+  S.daten.kategorien.push({
+    id, name:String(name), farbe: farbe || FARBEN[S.daten.kategorien.length % FARBEN.length],
+    sammlungId: sam, order: alleKats().length, updatedAt:jetzt(), deleted:false, links:[]
+  });
+  geaendert();
+  return id;
+}
+
+function katDialog(katId){
+  const k = katId? findeKat(katId) : null;
+  S.bearbeiteKat = k? k.id : null;
+  $("#dlgKatTitel").textContent = k? "Kategorie bearbeiten" : "Neue Kategorie";
+  $("#kName").value = k? k.name : "";
+  const gewaehlt = k? k.farbe : FARBEN[aktiveKats().length % FARBEN.length];
+  $("#kFarben").innerHTML = FARBEN.map(f=>
+    '<button type="button" role="radio" data-f="'+f+'" aria-checked="'+(f===gewaehlt)+'" style="background:'+f+'"></button>').join("");
+  $("#dlgKat").showModal();
+  setTimeout(()=>$("#kName").focus(),30);
+}
+
+function katSpeichernAusDialog(){
+  const name = $("#kName").value.trim(); if(!name) return;
+  const farbe = ($("#kFarben button[aria-checked='true']")||{}).dataset?.f || FARBEN[0];
+  if(S.bearbeiteKat){
+    const k = findeKat(S.bearbeiteKat);
+    if(k){ k.name=name; k.farbe=farbe; k.updatedAt=jetzt(); }
+  } else katAnlegen(name, farbe);
+  geaendert(); zeichnen();
+}
+
+async function linkLoeschen(id){
+  const f = findeLink(id); if(!f) return;
+  if(!await bestaetige("„"+f.link.titel+"“ wirklich löschen?")) return;
+  f.link.deleted = true; f.link.updatedAt = jetzt();
+  geaendert(); zeichnen(); toast("Gelöscht.");
+}
+async function katLoeschen(id){
+  const k = findeKat(id); if(!k) return;
+  const n = aktiveLinks(k).length;
+  if(!await bestaetige("Kategorie „"+k.name+"“ mit "+n+" Link(s) löschen?")) return;
+  k.deleted = true; k.updatedAt = jetzt();
+  for(const l of k.links){ if(!l.deleted){ l.deleted=true; l.updatedAt=jetzt(); } }
+  geaendert(); zeichnen();
+}
+
+/* ---------- Sammlungen ---------- */
+function sammAnlegen(name, ikon){
+  const id = uid("sam");
+  S.daten.sammlungen.push({ id, name:String(name), ikon:String(ikon||"").slice(0,3),
+    order: aktiveSamm().length, updatedAt:jetzt(), deleted:false });
+  geaendert();
+  return id;
+}
+function sammDialog(id){
+  const x = id? findeSamm(id) : null;
+  S.bearbeiteSamm = x? x.id : null;
+  $("#dlgSammTitel").textContent = x? "Sammlung bearbeiten" : "Neue Sammlung";
+  $("#saName").value = x? x.name : "";
+  $("#saIkon").value = x? (x.ikon||"") : "";
+  $("#dlgSamm").showModal();
+  setTimeout(()=>$("#saName").focus(),30);
+}
+function sammSpeichernAusDialog(){
+  const name = $("#saName").value.trim(); if(!name) return;
+  const ikon = $("#saIkon").value.trim().slice(0,3);
+  if(S.bearbeiteSamm){
+    const x = findeSamm(S.bearbeiteSamm);
+    if(x){ x.name=name; x.ikon=ikon; x.updatedAt=jetzt(); }
+  } else {
+    S.sammlung = sammAnlegen(name, ikon);
+    S.einst.letzteSammlung = S.sammlung; einstSichern();
+  }
+  geaendert(); zeichnen();
+}
+async function sammLoeschen(id){
+  const x = findeSamm(id); if(!x) return;
+  const drin = alleKats().filter(k=>k.sammlungId===id);
+  const rest = aktiveSamm().filter(y=>y.id!==id);
+  if(!rest.length){ toast("Die letzte Sammlung lässt sich nicht löschen."); return; }
+  const ok = await bestaetige("Sammlung „"+x.name+"“ löschen? Die "+drin.length+
+    " enthaltenen Kategorien wandern nach „"+rest[0].name+"“ und bleiben erhalten.", "Löschen");
+  if(!ok) return;
+  const t = jetzt();
+  for(const k of drin){ k.sammlungId = rest[0].id; k.updatedAt = t; }
+  x.deleted = true; x.updatedAt = t;
+  if(S.sammlung===id){ S.sammlung = "__alle"; S.einst.letzteSammlung = "__alle"; einstSichern(); }
+  geaendert(); zeichnen();
+}
+function katInSammlung(katId, sammId){
+  const k = findeKat(katId); if(!k || k.sammlungId===sammId) return;
+  const ziel = sammId==="__alle"? null : findeSamm(sammId);
+  if(!ziel) return;
+  k.sammlungId = sammId; k.updatedAt = jetzt();
+  geaendert(); zeichnen();
+  toast("„"+k.name+"“ → "+ziel.name);
+}
+
+/* ---------- Schnellstartleiste ---------- */
+function dockHinzufuegen(titel, url, vorId){
+  if(!url) return;
+  const schon = aktivesDock().find(e=>e.url===url);
+  if(schon){ toast("Ist schon in der Leiste."); return; }
+  const e = { id:uid("dck"), titel:String(titel||domain(url)||url), url:String(url),
+              order:0, updatedAt:jetzt(), deleted:false };
+  const liste = aktivesDock();
+  let idx = liste.length;
+  if(vorId){ const i = liste.findIndex(x=>x.id===vorId); if(i>=0) idx = i; }
+  liste.splice(idx, 0, e);
+  const t = jetzt();
+  liste.forEach((x,i)=>{ if(x.order!==i || x===e){ x.order=i; x.updatedAt=t; } });
+  S.daten.dock = liste.concat((S.daten.dock||[]).filter(x=>x.deleted));
+  geaendert(); zeichnen();
+  toast("„"+e.titel+"“ in die Leiste übernommen.");
+}
+function dockVerschieben(id, vorId){
+  const liste = aktivesDock();
+  const e = liste.find(x=>x.id===id); if(!e) return;
+  const ohne = liste.filter(x=>x.id!==id);
+  let idx = ohne.length;
+  if(vorId){ const i = ohne.findIndex(x=>x.id===vorId); if(i>=0) idx=i; }
+  ohne.splice(idx,0,e);
+  const t = jetzt();
+  ohne.forEach((x,i)=>{ if(x.order!==i){ x.order=i; x.updatedAt=t; } });
+  S.daten.dock = ohne.concat((S.daten.dock||[]).filter(x=>x.deleted));
+  geaendert(); zeichnen();
+}
+function dockEntfernen(id){
+  const e = (S.daten.dock||[]).find(x=>x.id===id); if(!e) return;
+  e.deleted = true; e.updatedAt = jetzt();
+  geaendert(); zeichnen();
+}
+
+function linkVerschieben(linkId, zielKatId, vorLinkId){
+  const f = findeLink(linkId); if(!f) return;
+  const quelle = f.kat, l = f.link;
+  const ziel = findeKat(zielKatId); if(!ziel) return;
+  quelle.links = quelle.links.filter(x=>x.id!==linkId);
+  const aktiv = ziel.links.filter(x=>!x.deleted).sort((a,b)=>a.order-b.order);
+  let idx = aktiv.length;
+  if(vorLinkId){ const i = aktiv.findIndex(x=>x.id===vorLinkId); if(i>=0) idx = i; }
+  aktiv.splice(idx,0,l);
+  const t = jetzt();
+  aktiv.forEach((x,i)=>{ if(x.order!==i || x===l){ x.order=i; x.updatedAt=t; } });
+  ziel.links = aktiv.concat(ziel.links.filter(x=>x.deleted));
+  quelle.links.filter(x=>!x.deleted).sort((a,b)=>a.order-b.order)
+    .forEach((x,i)=>{ if(x.order!==i){ x.order=i; x.updatedAt=t; } });
+  geaendert(); zeichnen();
+}
+
+function katVerschieben(katId, vorKatId){
+  const liste = aktiveKats();
+  const k = findeKat(katId); if(!k) return;
+  const ohne = liste.filter(x=>x.id!==katId);
+  let idx = ohne.length;
+  if(vorKatId){ const i = ohne.findIndex(x=>x.id===vorKatId); if(i>=0) idx=i; }
+  ohne.splice(idx,0,k);
+  const t = jetzt();
+  ohne.forEach((x,i)=>{ if(x.order!==i){ x.order=i; x.updatedAt=t; } });
+  geaendert(); zeichnen();
+}
+</script>
+
+<script>
+"use strict";
+/* ================================ Import ================================= */
+
+/* Netscape-Bookmark-Format (Chrome, Edge, Firefox, Papaly) */
+function importNetscape(html){
+  const doc = new DOMParser().parseFromString(html,"text/html");
+  const kats = [];
+  let sonstige = null;
+
+  function holeKat(name){
+    let k = kats.find(x=>x.name===name);
+    if(!k){ k = {id:uid("cat"), name, farbe:FARBEN[kats.length%FARBEN.length],
+                 order:kats.length, updatedAt:jetzt(), deleted:false, links:[]}; kats.push(k); }
+    return k;
+  }
+  function gehe(dl, pfad){
+    for(const dt of Array.from(dl.children)){
+      if(dt.tagName!=="DT") continue;
+      const h3 = dt.querySelector(":scope > h3");
+      const a  = dt.querySelector(":scope > a");
+      if(h3){
+        const name = (pfad? pfad+" / ":"")+h3.textContent.trim();
+        const unter = dt.querySelector(":scope > dl");
+        if(unter) gehe(unter, name);
+      } else if(a && a.getAttribute("href")){
+        const url = a.getAttribute("href");
+        if(/^(javascript|place):/i.test(url)) continue;
+        const k = pfad? holeKat(pfad) : (sonstige = sonstige || holeKat("Importiert"));
+        k.links.push({ id:uid("lnk"), titel:(a.textContent||domain(url)).trim()||url, url,
+          notiz:"", tags:[], order:k.links.length, updatedAt:jetzt(), deleted:false });
+      }
+    }
+  }
+  const wurzel = doc.querySelector("dl");
+  if(wurzel) gehe(wurzel, "");
+  return { schema:1, updatedAt:jetzt(), geraet:geraetName(),
+           kategorien: kats.filter(k=>k.links.length) };
+}
+
+async function importDateiLesen(datei){
+  const txt = await datei.text();
+  let neu = null;
+  if(/\.(html?|htm)$/i.test(datei.name) || /<!DOCTYPE NETSCAPE-Bookmark/i.test(txt) || /<DL>/i.test(txt)){
+    neu = importNetscape(txt);
+  } else {
+    neu = ausTextLesen(txt);
+  }
+  if(!neu || !neu.kategorien.length){ toast("Keine Lesezeichen in der Datei gefunden."); return; }
+  const anzahl = neu.kategorien.reduce((s,k)=>s+k.links.length,0);
+  const ok = await bestaetige(anzahl+" Links in "+neu.kategorien.length+
+    " Kategorien gefunden. Zu den vorhandenen Favoriten hinzufügen?", "Hinzufügen");
+  if(!ok) return;
+  S.daten = zusammenfuehren(S.daten, neu);
+  geaendert(); zeichnen();
+  toast(anzahl+" Links importiert.");
+}
+
+/* ================================ Ereignisse ============================= */
+const suche = $("#suche");
+
+suche.addEventListener("input", ()=> suchen(suche.value));
+suche.addEventListener("keydown", e=>{
+  if(e.key==="ArrowDown"){ e.preventDefault(); auswahlBewegen(1); }
+  else if(e.key==="ArrowUp"){ e.preventDefault(); auswahlBewegen(-1); }
+  else if(e.key==="Enter"){ e.preventDefault(); trefferOeffnen(e.ctrlKey||e.metaKey||e.shiftKey); }
+  else if(e.key==="Escape"){ suche.value=""; suchen(""); suche.blur(); }
+});
+$("#treffer").addEventListener("click", e=>{
+  const a = e.target.closest(".lnk"); if(!a) return;
+  if(!S.einst.neuerTab && !e.ctrlKey && !e.metaKey){ /* normaler Link */ }
+});
+$("#treffer").addEventListener("mousemove", e=>{
+  const a = e.target.closest(".lnk"); if(!a) return;
+  const i = +a.dataset.i;
+  if(i!==S.auswahl){ S.auswahl=i; $$("#treffer .lnk").forEach((x,j)=>x.classList.toggle("aktiv",j===i)); }
+});
+
+/* Klicks im Raster: Werkzeuge abfangen, sonst Link öffnen lassen */
+$("#raster").addEventListener("click", e=>{
+  const b = e.target.closest("[data-tat]");
+  if(!b) return;
+  e.preventDefault(); e.stopPropagation();
+  const katEl = e.target.closest("[data-kat]");
+  const katId = katEl && katEl.dataset.kat;
+  const lnkEl = e.target.closest("[data-link]");
+  const lnkId = lnkEl && lnkEl.dataset.link;
+  switch(b.dataset.tat){
+    case "link-bearb": linkDialog(lnkId); break;
+    case "link-weg":   linkLoeschen(lnkId); break;
+    case "kat-neu":    linkDialog(null, katId); break;
+    case "kat-bearb":  katDialog(katId); break;
+    case "kat-weg":    katLoeschen(katId); break;
+  }
+});
+
+/* Seitenleiste */
+$("#leiste").addEventListener("click", e=>{
+  const w = e.target.closest("[data-tat]");
+  const knopf = e.target.closest("[data-sam]");
+  if(w){
+    e.preventDefault(); e.stopPropagation();
+    const id = knopf && knopf.dataset.sam;
+    if(w.dataset.tat==="sam-neu")   return sammDialog(null);
+    if(w.dataset.tat==="sam-bearb") return sammDialog(id);
+    if(w.dataset.tat==="sam-weg")   return sammLoeschen(id);
+  }
+  if(!knopf) return;
+  S.sammlung = knopf.dataset.sam;
+  S.einst.letzteSammlung = S.sammlung; einstSichern();
+  zeichnen();
+});
+
+$("#leiste").addEventListener("keydown", e=>{
+  if(e.key!=="Enter" && e.key!==" ") return;
+  const el = e.target.closest("[data-sam],[data-tat]");
+  if(!el) return;
+  e.preventDefault(); el.click();
+});
+
+/* Schnellstartleiste */
+$("#dock").addEventListener("click", e=>{
+  const w = e.target.closest("[data-tat]");
+  if(!w) return;
+  e.preventDefault(); e.stopPropagation();
+  const el = e.target.closest("[data-dock]");
+  if(w.dataset.tat==="dock-weg" && el) dockEntfernen(el.dataset.dock);
+});
+
+/* Ziehen und Ablegen */
+document.addEventListener("dragstart", e=>{
+  const dk = e.target.closest(".dk[data-dock]");
+  if(dk){ S.drag={typ:"dock", id:dk.dataset.dock};
+          e.dataTransfer.effectAllowed="move";
+          e.dataTransfer.setData("text/plain", dk.href); return; }
+  const a = e.target.closest(".lnk[data-link]");
+  if(a){ S.drag={typ:"link", id:a.dataset.link, kat:a.dataset.kat};
+         e.dataTransfer.effectAllowed="move";
+         e.dataTransfer.setData("text/plain", a.href); return; }
+  const h = e.target.closest(".kat-kopf");
+  if(h && S.bearbeiten){ const s=h.closest(".kat");
+    S.drag={typ:"kat", id:s.dataset.kat}; e.dataTransfer.effectAllowed="move";
+    e.dataTransfer.setData("text/plain", s.dataset.kat); }
+});
+document.addEventListener("dragend", ()=>{ S.drag=null; zieleLoeschen(); });
+function zieleLoeschen(){
+  $$(".dragover").forEach(x=>x.classList.remove("dragover"));
+  $$(".ziel").forEach(x=>x.classList.remove("ziel"));
+}
+
+document.addEventListener("dragover", e=>{
+  if(!S.drag) return;
+
+  /* Ziel Schnellstartleiste: Links hineinziehen, Dock-Einträge sortieren */
+  const imDock = e.target.closest("#dock");
+  if(imDock && (S.drag.typ==="link" || S.drag.typ==="dock")){
+    e.preventDefault(); e.dataTransfer.dropEffect = S.drag.typ==="dock"? "move":"copy";
+    zieleLoeschen();
+    imDock.classList.add("ziel");
+    const z = e.target.closest(".dk[data-dock]");
+    if(z && z.dataset.dock!==S.drag.id) z.classList.add("dragover");
+    return;
+  }
+  if(S.drag.typ==="dock") return;
+
+  /* Ziel Sammlung in der Seitenleiste: Kategorie umhängen */
+  if(S.drag.typ==="kat"){
+    const sam = e.target.closest(".sam[data-sam]");
+    if(sam && sam.dataset.sam!=="__alle"){
+      e.preventDefault(); e.dataTransfer.dropEffect="move";
+      zieleLoeschen(); sam.classList.add("ziel");
+      return;
+    }
+  }
+
+  if(S.drag.typ==="link"){
+    const ziel = e.target.closest(".kat-liste, .kat");
+    if(!ziel) return;
+    e.preventDefault(); e.dataTransfer.dropEffect="move";
+    $$(".dragover").forEach(x=>x.classList.remove("dragover"));
+    $$(".ziel").forEach(x=>x.classList.remove("ziel"));
+    const z = e.target.closest(".lnk[data-link]");
+    if(z && z.dataset.link!==S.drag.id) z.classList.add("dragover");
+    const s = e.target.closest(".kat"); if(s) s.classList.add("ziel");
+  } else if(S.drag.typ==="kat"){
+    const s = e.target.closest(".kat"); if(!s) return;
+    e.preventDefault(); e.dataTransfer.dropEffect="move";
+    $$(".ziel").forEach(x=>x.classList.remove("ziel"));
+    if(s.dataset.kat!==S.drag.id) s.classList.add("ziel");
+  }
+});
+document.addEventListener("drop", e=>{
+  if(!S.drag) return;
+  const d = S.drag; S.drag=null;
+  zieleLoeschen();
+
+  const imDock = e.target.closest("#dock");
+  if(imDock && (d.typ==="link" || d.typ==="dock")){
+    e.preventDefault();
+    const z = e.target.closest(".dk[data-dock]");
+    const vor = (z && z.dataset.dock!==d.id)? z.dataset.dock : null;
+    if(d.typ==="dock") dockVerschieben(d.id, vor);
+    else {
+      const f = findeLink(d.id);
+      if(f) dockHinzufuegen(f.link.titel, f.link.url, vor);
+    }
+    return;
+  }
+  if(d.typ==="dock") return;
+
+  if(d.typ==="kat"){
+    const sam = e.target.closest(".sam[data-sam]");
+    if(sam && sam.dataset.sam!=="__alle"){ e.preventDefault(); return katInSammlung(d.id, sam.dataset.sam); }
+  }
+
+  if(d.typ==="link"){
+    const s = e.target.closest(".kat"); if(!s) return;
+    e.preventDefault();
+    const z = e.target.closest(".lnk[data-link]");
+    linkVerschieben(d.id, s.dataset.kat, (z && z.dataset.link!==d.id)? z.dataset.link : null);
+  } else {
+    const s = e.target.closest(".kat"); if(!s || s.dataset.kat===d.id) return;
+    e.preventDefault();
+    katVerschieben(d.id, s.dataset.kat);
+  }
+});
+
+/* Tastatur global */
+document.addEventListener("keydown", e=>{
+  const imFeld = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+  const dialogOffen = !!document.querySelector("dialog[open]");
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="s"){
+    e.preventDefault();
+    syncJetzt(false);
+    return;
+  }
+  if(dialogOffen) return;
+  if(!imFeld){
+    if(e.key==="/" || (e.key.length===1 && !e.ctrlKey && !e.metaKey && !e.altKey && /[\wäöüß]/i.test(e.key))){
+      if(e.key!=="/" ){ suche.focus(); return; }
+      e.preventDefault(); suche.focus(); return;
+    }
+    if(e.key.toLowerCase()==="n"){ e.preventDefault(); linkDialog(null); }
+    if(e.key.toLowerCase()==="e"){ e.preventDefault(); bearbeitenUmschalten(); }
+  }
+});
+
+function bearbeitenUmschalten(){
+  S.bearbeiten = !S.bearbeiten;
+  $("#btnBearbeiten").classList.toggle("an", S.bearbeiten);
+  zeichnen();
+}
+
+/* Knöpfe */
+$("#btnNeu").onclick = ()=> linkDialog(null);
+$("#btnBearbeiten").onclick = bearbeitenUmschalten;
+$("#btnSync").onclick = ()=> syncJetzt(false);
+$("#btnMenue").onclick = ()=>{ menueFuellen(); $("#dlgMenue").showModal(); };
+
+$("#dlgLink").addEventListener("close", ()=>{ if($("#dlgLink").returnValue==="ok") linkSpeichernAusDialog(); });
+$("#dlgKat").addEventListener("close", ()=>{ if($("#dlgKat").returnValue==="ok") katSpeichernAusDialog(); });
+$("#dlgSamm").addEventListener("close", ()=>{ if($("#dlgSamm").returnValue==="ok") sammSpeichernAusDialog(); });
+$("#kFarben").addEventListener("click", e=>{
+  const b=e.target.closest("button[data-f]"); if(!b) return;
+  $$("#kFarben button").forEach(x=>x.setAttribute("aria-checked","false"));
+  b.setAttribute("aria-checked","true");
+});
+$("#fUrl").addEventListener("blur", ()=>{
+  const t=$("#fTitel"); if(!t.value.trim()){ const d=domain($("#fUrl").value.trim()); if(d) t.value=d; }
+});
+
+/* Menü */
+function menueFuellen(){
+  $("#sTheme").setAttribute("aria-checked", S.einst.theme==="hell");
+  $("#sFavicon").setAttribute("aria-checked", !!S.einst.favicons);
+  $("#sDock").setAttribute("aria-checked", !!S.einst.dock);
+  $("#sBearb").setAttribute("aria-checked", !!S.bearbeiten);
+  $("#sDomain").setAttribute("aria-checked", !!S.einst.domain);
+  $("#sNeuerTab").setAttribute("aria-checked", !!S.einst.neuerTab);
+  $("#sSpalte").value = S.einst.spalte;
+  $("#sSuchmaschine").value = S.einst.suchmaschine;
+  $("#syUrl").value = S.sync.url || "";
+  $("#syToken").value = S.sync.token || "";
+  $("#sySeite").value = S.sync.seite || "";
+  $("#syAn").setAttribute("aria-checked", !!S.sync.an);
+  $("#mSyncLage").innerHTML = S.sync.an
+    ? (S.sync.fehler
+        ? "Letzter Versuch fehlgeschlagen: <code>"+esc(S.sync.fehler)+"</code>"
+        : "Eingeschaltet. "+esc(syncText())+". Es werden nur geänderte Einträge übertragen, "+
+          "zusammengeführt wird pro Eintrag – ein Gerät kann den Stand eines anderen nicht überschreiben.")
+    : "Aus. Mit einem kleinen Apps Script in deinem eigenen Google-Konto gleichen sich PC und Handy ab. "+
+      "Einrichtung: siehe ANLEITUNG.md.";
+  statusZeichnen();
+}
+function schalter(el, feld, nach){
+  el.onclick = ()=>{
+    S.einst[feld] = !S.einst[feld];
+    el.setAttribute("aria-checked", S.einst[feld]);
+    einstSichern(); if(nach) nach(); zeichnen();
+  };
+}
+$("#sTheme").onclick = ()=>{
+  S.einst.theme = S.einst.theme==="hell"? "dunkel":"hell";
+  $("#sTheme").setAttribute("aria-checked", S.einst.theme==="hell");
+  einstSichern(); zeichnen();
+};
+schalter($("#sFavicon"),"favicons");
+schalter($("#sDock"),"dock");
+schalter($("#sDomain"),"domain");
+schalter($("#sNeuerTab"),"neuerTab");
+$("#sSpalte").oninput = e=>{ S.einst.spalte=+e.target.value; einstSichern();
+  document.documentElement.style.setProperty("--spalte", S.einst.spalte+"px"); };
+$("#sSuchmaschine").onchange = e=>{ S.einst.suchmaschine=e.target.value; einstSichern(); };
+
+$("#sBearb").onclick = ()=>{ bearbeitenUmschalten(); $("#sBearb").setAttribute("aria-checked", S.bearbeiten); };
+$("#syUrl").onchange  = e=>{ S.sync.url = e.target.value.trim(); syncSichern(); menueFuellen(); };
+$("#syToken").onchange= e=>{ S.sync.token = e.target.value.trim(); syncSichern(); menueFuellen(); };
+$("#sySeite").onchange = e=>{ S.sync.seite = e.target.value.trim(); syncSichern(); };
+$("#syAn").onclick = ()=>{
+  S.sync.url = $("#syUrl").value.trim();
+  S.sync.token = $("#syToken").value.trim();
+  S.sync.an = !S.sync.an;
+  if(S.sync.an && (!S.sync.url || !S.sync.token)){
+    S.sync.an = false; toast("Bitte erst Adresse und Token eintragen.");
+  }
+  syncSichern(); menueFuellen(); statusZeichnen();
+  if(S.sync.an) syncJetzt(false);
+};
+$("#syJetzt").onclick = async ()=>{
+  S.sync.url = $("#syUrl").value.trim();
+  S.sync.token = $("#syToken").value.trim();
+  if(!S.sync.an){ S.sync.an = true; }
+  syncSichern();
+  await syncJetzt(false);
+  menueFuellen();
+};
+$("#syLink").onclick = async ()=>{
+  S.sync.seite = $("#sySeite").value.trim(); syncSichern();
+  if(!S.sync.url || !S.sync.token){ toast("Erst Adresse und Token eintragen."); return; }
+  const l = syncLinkBauen();
+  try{ await navigator.clipboard.writeText(l); toast("Link kopiert – auf dem Handy einmal öffnen."); }
+  catch(e){ $("#syUrl").value = l; $("#syUrl").select(); toast("Link steht im Adressfeld – von Hand kopieren."); }
+};
+$("#mNeueSamm").onclick = ()=>{ $("#dlgMenue").close(); sammDialog(null); };
+$("#mNeueKat").onclick = ()=>{ $("#dlgMenue").close(); katDialog(null); };
+$("#mExport").onclick = ()=> herunterladen("favoriten-daten.js", serialisiere(S.daten), "text/javascript;charset=utf-8");
+$("#mExportJson").onclick = ()=> herunterladen("favoriten-"+new Date().toISOString().slice(0,10)+".json",
+  JSON.stringify(S.daten,null,2), "application/json");
+$("#mImport").onclick = ()=> $("#importDatei").click();
+$("#importDatei").onchange = async e=>{
+  const f = e.target.files[0]; if(!f) return;
+  $("#dlgMenue").close();
+  await importDateiLesen(f);
+  e.target.value = "";
+};
+$("#mZu").onclick = ()=> $("#dlgMenue").close();
+
+/* Beim Zurückkehren ins Fenster die Datei erneut lesen (Cloud-Abgleich) */
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState!=="visible") return;
+  if(S.sync.an && jetzt() - (S.sync.letzterOk||0) > 30000) syncJetzt(true);
+});
+window.addEventListener("online", ()=>{
+  statusZeichnen();
+  if(S.sync.an) setTimeout(()=>syncJetzt(true), 800);
+});
+window.addEventListener("offline", statusZeichnen);
+
+/* ================================= Start ================================= */
+(async function start(){
+  einstLaden();
+  document.documentElement.dataset.theme = S.einst.theme;
+
+  const ausDatei = window.FAVORITEN_DATEN ? normalisiere(window.FAVORITEN_DATEN) : null;
+  const ausLokal = lokalLaden() ? normalisiere(lokalLaden()) : null;
+
+  if(ausDatei && ausLokal)      S.daten = zusammenfuehren(ausLokal, ausDatei);
+  else if(ausDatei)             S.daten = ausDatei;
+  else if(ausLokal)             S.daten = ausLokal;
+  else                          S.daten = leer();
+
+  aufraeumen(S.daten);          /* alte Grabsteine entsorgen */
+
+  const gemerkt = S.einst.letzteSammlung || "__alle";
+  S.sammlung = (gemerkt==="__alle" || findeSamm(gemerkt))? gemerkt : "__alle";
+  lokalSichern();
+  zeichnen();
+
+  /* Abgleich */
+  syncLaden();
+  const frischEingerichtet = syncAusHash();
+  if(S.sync.an){
+    syncJetzt(true).then(()=>{ if(frischEingerichtet) zeichnen(); });
+    setInterval(()=>{ if(document.visibilityState==="visible") syncJetzt(true); }, SYNC_TAKT);
+  }
+
+  parameterVerarbeiten();
+  suche.focus();
+
+  /* Offline-Fähigkeit: nur über http(s) möglich, per file:// gibt es keine
+     Service Worker - dort ist die Seite ohnehin schon lokal. */
+  if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  }
+})();
+
+/* ?add=<URL>&titel=<Titel> — fuer den Lesezeichen-Knopf (Bookmarklet) */
+function parameterVerarbeiten(){
+  const q = new URLSearchParams(location.search);
+  const url = q.get("add");
+  if(!url) return;
+  try{ history.replaceState(null,"",location.pathname); }catch(e){}
+  linkDialog(null);
+  $("#fUrl").value = url;
+  $("#fTitel").value = q.get("titel") || "";
+  setTimeout(()=>$("#fKat").focus(), 40);
+}
+</script>
+</body>
+</html>
