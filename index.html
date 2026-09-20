@@ -472,7 +472,7 @@ const S = {
   daten: leer(),
   einst: {
     theme:"dunkel", favicons:false, domain:true, spalte:270,
-    neuerTab:false, suchmaschine:"https://duckduckgo.com/?q=", dock:true,
+    neuerTab:true, suchmaschine:"https://duckduckgo.com/?q=", dock:true,
     letzteSammlung:"__alle"
   },
   bearbeiten:false,
@@ -672,7 +672,12 @@ function lokalSichern(){
   catch(e){ toast("Browserspeicher nicht verfügbar – bitte eine Sicherungskopie ziehen."); }
 }
 function einstLaden(){
-  try{ Object.assign(S.einst, JSON.parse(SPEICHER.hol(LS_EINST)||"{}")); }catch(e){}
+  let roh = {};
+  try{ roh = JSON.parse(SPEICHER.hol(LS_EINST)||"{}"); }catch(e){}
+  Object.assign(S.einst, roh);
+  /* „Links in neuem Tab“ ist seit dieser Fassung die Vorgabe. Bestände, in
+     denen der Schalter nie bewusst umgelegt wurde, übernehmen sie. */
+  if(!roh.neuerTabGesetzt) S.einst.neuerTab = true;
 }
 function einstSichern(){
   try{ SPEICHER.setz(LS_EINST, JSON.stringify(S.einst)); }catch(e){}
@@ -1842,7 +1847,12 @@ $("#sTheme").onclick = ()=>{
 schalter($("#sFavicon"),"favicons");
 schalter($("#sDock"),"dock");
 schalter($("#sDomain"),"domain");
-schalter($("#sNeuerTab"),"neuerTab");
+$("#sNeuerTab").onclick = ()=>{
+  S.einst.neuerTab = !S.einst.neuerTab;
+  S.einst.neuerTabGesetzt = true;
+  $("#sNeuerTab").setAttribute("aria-checked", S.einst.neuerTab);
+  einstSichern(); zeichnen();
+};
 $("#sSpalte").oninput = e=>{ S.einst.spalte=+e.target.value; einstSichern();
   document.documentElement.style.setProperty("--spalte", S.einst.spalte+"px"); };
 $("#sSuchmaschine").onchange = e=>{ S.einst.suchmaschine=e.target.value; einstSichern(); };
