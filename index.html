@@ -295,11 +295,11 @@ html[data-theme="hell"] #dock{box-shadow:0 10px 30px rgba(20,30,60,.16)}
 
 <!-- ===== Dialog: Link ===== -->
 <dialog id="dlgLink">
-  <form method="dialog">
+  <form onsubmit="return false">
     <div class="dlg-kopf" id="dlgLinkTitel">Favorit</div>
     <div class="dlg-body">
       <label class="f">URL
-        <input id="fUrl" type="text" placeholder="https://…" required></label>
+        <input id="fUrl" type="text" placeholder="https://…"></label>
       <label class="f">Titel
         <input id="fTitel" type="text" placeholder="wird aus der Adresse abgeleitet"></label>
       <div class="reihe">
@@ -311,34 +311,34 @@ html[data-theme="hell"] #dock{box-shadow:0 10px 30px rgba(20,30,60,.16)}
         <input id="fNotiz" type="text" placeholder="optional"></label>
     </div>
     <div class="dlg-fuss">
-      <button class="btn" value="abbruch" formnovalidate>Abbrechen</button>
-      <button class="btn prim" id="fLinkOk" value="ok">Speichern</button>
+      <button type="button" class="btn" data-dlg="zu">Abbrechen</button>
+      <button type="button" class="btn prim" id="fLinkOk" data-dlg="ok">Speichern</button>
     </div>
   </form>
 </dialog>
 
 <!-- ===== Dialog: Kategorie ===== -->
 <dialog id="dlgKat">
-  <form method="dialog">
+  <form onsubmit="return false">
     <div class="dlg-kopf" id="dlgKatTitel">Kategorie</div>
     <div class="dlg-body">
-      <label class="f">Name<input id="kName" type="text" required></label>
+      <label class="f">Name<input id="kName" type="text"></label>
       <label class="f">Farbe<span class="farbwahl" id="kFarben"></span></label>
     </div>
     <div class="dlg-fuss">
-      <button class="btn" value="abbruch" formnovalidate>Abbrechen</button>
-      <button class="btn prim" value="ok">Speichern</button>
+      <button type="button" class="btn" data-dlg="zu">Abbrechen</button>
+      <button type="button" class="btn prim" data-dlg="ok">Speichern</button>
     </div>
   </form>
 </dialog>
 
 <!-- ===== Dialog: Sammlung ===== -->
 <dialog id="dlgSamm">
-  <form method="dialog">
+  <form onsubmit="return false">
     <div class="dlg-kopf" id="dlgSammTitel">Sammlung</div>
     <div class="dlg-body">
       <div class="reihe">
-        <label class="f" style="flex:3">Name<input id="saName" type="text" required></label>
+        <label class="f" style="flex:3">Name<input id="saName" type="text"></label>
         <label class="f" style="flex:1">Zeichen<input id="saIkon" type="text" maxlength="2" placeholder="z. B. 🏠"></label>
       </div>
       <div class="hinweis">Sammlungen sind die oberste Ebene: darin liegen die Kategorien,
@@ -346,8 +346,8 @@ html[data-theme="hell"] #dock{box-shadow:0 10px 30px rgba(20,30,60,.16)}
         auf eine Sammlung in der Leiste verschieben.</div>
     </div>
     <div class="dlg-fuss">
-      <button class="btn" value="abbruch" formnovalidate>Abbrechen</button>
-      <button class="btn prim" value="ok">Speichern</button>
+      <button type="button" class="btn" data-dlg="zu">Abbrechen</button>
+      <button type="button" class="btn prim" data-dlg="ok">Speichern</button>
     </div>
   </form>
 </dialog>
@@ -395,6 +395,8 @@ html[data-theme="hell"] #dock{box-shadow:0 10px 30px rgba(20,30,60,.16)}
     <div class="zeile"><span>Papaly- oder Browser-Export (HTML / JSON)</span>
       <button class="btn" id="mImport">Datei wählen …</button></div>
     <input type="file" id="importDatei" accept=".html,.htm,.json,.js" class="sr">
+    <div class="zeile"><span>Kategorien wie „Privat / Bank“ in Sammlungen aufteilen</span>
+      <button class="btn" id="mAufteilen">Aufteilen</button></div>
     <div class="trenner"></div>
 
     <div style="font-weight:600;font-size:13px">Darstellung</div>
@@ -1175,19 +1177,15 @@ function linkDialog(linkId, katId){
   setTimeout(()=>$( f? "#fTitel" : "#fUrl").focus(), 30);
 }
 
-async function linkSpeichernAusDialog(){
+function linkSpeichernAusDialog(){
   let url = $("#fUrl").value.trim();
-  if(!url) return;
+  if(!url){ $("#fUrl").focus(); return false; }
   if(!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = "https://"+url;
   let titel = $("#fTitel").value.trim() || domain(url) || url;
   const notiz = $("#fNotiz").value.trim();
   const tags  = $("#fTags").value.split(",").map(s=>s.trim()).filter(Boolean);
   let katId = $("#fKat").value;
-  if(katId==="__neu"){
-    const name = await frageText("Neue Kategorie");
-    if(!name) return;
-    katId = katAnlegen(name);
-  }
+  if(katId==="__neu" || !findeKat(katId)){ $("#fKat").focus(); return false; }
   if(S.bearbeiteLink){
     const f = findeLink(S.bearbeiteLink);
     if(f){
@@ -1232,7 +1230,8 @@ function katDialog(katId){
 }
 
 function katSpeichernAusDialog(){
-  const name = $("#kName").value.trim(); if(!name) return;
+  const name = $("#kName").value.trim();
+  if(!name){ $("#kName").focus(); return false; }
   const farbe = ($("#kFarben button[aria-checked='true']")||{}).dataset?.f || FARBEN[0];
   if(S.bearbeiteKat){
     const k = findeKat(S.bearbeiteKat);
@@ -1274,7 +1273,8 @@ function sammDialog(id){
   setTimeout(()=>$("#saName").focus(),30);
 }
 function sammSpeichernAusDialog(){
-  const name = $("#saName").value.trim(); if(!name) return;
+  const name = $("#saName").value.trim();
+  if(!name){ $("#saName").focus(); return false; }
   const ikon = $("#saIkon").value.trim().slice(0,3);
   if(S.bearbeiteSamm){
     const x = findeSamm(S.bearbeiteSamm);
@@ -1306,6 +1306,38 @@ function katInSammlung(katId, sammId){
   k.sammlungId = sammId; k.updatedAt = jetzt();
   geaendert(); zeichnen();
   toast("„"+k.name+"“ → "+ziel.name);
+}
+
+/* Nachträglich aufräumen: aus „Oberordner / Unterordner“ echte Sammlungen machen.
+   Für Bestände, die mit der älteren Importfassung hereingekommen sind. */
+async function sammlungenAusNamen(){
+  const kand = alleKats().filter(k => k.name.includes(" / "));
+  if(!kand.length){ toast("Keine Kategorie mit „ / “ im Namen gefunden."); return; }
+  const namen = [...new Set(kand.map(k => k.name.split(" / ")[0].trim()))];
+  const ok = await bestaetige(
+    kand.length+" Kategorien werden auf "+namen.length+" Sammlungen verteilt: "+
+    namen.slice(0,8).join(", ")+(namen.length>8 ? " …" : "")+
+    ". Die Links selbst bleiben unverändert.", "Aufteilen");
+  if(!ok) return;
+
+  const t = jetzt();
+  for(const k of kand){
+    const i = k.name.indexOf(" / ");
+    const sName = k.name.slice(0, i).trim() || "Sonstiges";
+    const rest  = k.name.slice(i + 3).trim() || sName;
+    let x = aktiveSamm().find(y => y.name === sName);
+    if(!x) x = findeSamm(sammAnlegen(sName));
+    k.sammlungId = x.id; k.name = rest; k.updatedAt = t;
+  }
+  /* Sammlungen, in denen danach nichts mehr liegt, verschwinden */
+  let leer = 0;
+  for(const x of aktiveSamm()){
+    if(aktiveSamm().length - leer <= 1) break;
+    if(!alleKats().some(k => k.sammlungId === x.id)){ x.deleted = true; x.updatedAt = t; leer++; }
+  }
+  S.sammlung = "__alle"; S.einst.letzteSammlung = "__alle"; einstSichern();
+  geaendert(); zeichnen();
+  toast(kand.length+" Kategorien neu einsortiert"+(leer? ", "+leer+" leere Sammlung(en) entfernt" : "")+".");
 }
 
 /* ---------- Schnellstartleiste ---------- */
@@ -1377,40 +1409,69 @@ function katVerschieben(katId, vorKatId){
 "use strict";
 /* ================================ Import ================================= */
 
-/* Netscape-Bookmark-Format (Chrome, Edge, Firefox, Papaly) */
+/* Netscape-Bookmark-Format (Chrome, Edge, Firefox, Papaly)
+   Abbildung:  oberste Ordnerebene -> Sammlung
+               zweite Ebene        -> Kategorie
+               alles darunter      -> an den Kategorienamen angehängt        */
 function importNetscape(html){
-  const doc = new DOMParser().parseFromString(html,"text/html");
-  const kats = [];
-  let sonstige = null;
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const sammlungen = [], kats = [];
 
-  function holeKat(name){
-    let k = kats.find(x=>x.name===name);
-    if(!k){ k = {id:uid("cat"), name, farbe:FARBEN[kats.length%FARBEN.length],
-                 order:kats.length, updatedAt:jetzt(), deleted:false, links:[]}; kats.push(k); }
+  const holeSammlung = name => {
+    let x = sammlungen.find(y => y.name === name);
+    if(!x){ x = { id:uid("sam"), name, ikon:"", order:sammlungen.length,
+                  updatedAt:jetzt(), deleted:false }; sammlungen.push(x); }
+    return x;
+  };
+  const holeKat = (sammId, name) => {
+    let k = kats.find(y => y.sammlungId===sammId && y.name===name);
+    if(!k){ k = { id:uid("cat"), name, farbe:FARBEN[kats.length % FARBEN.length],
+                  sammlungId:sammId, order:kats.length, updatedAt:jetzt(),
+                  deleted:false, links:[] }; kats.push(k); }
     return k;
-  }
-  function gehe(dl, pfad){
+  };
+
+  function gehe(dl, sammName, katName){
     for(const dt of Array.from(dl.children)){
-      if(dt.tagName!=="DT") continue;
+      if(dt.tagName !== "DT") continue;
       const h3 = dt.querySelector(":scope > h3");
       const a  = dt.querySelector(":scope > a");
+      const unter = dt.querySelector(":scope > dl");
       if(h3){
-        const name = (pfad? pfad+" / ":"")+h3.textContent.trim();
-        const unter = dt.querySelector(":scope > dl");
-        if(unter) gehe(unter, name);
+        const name = (h3.textContent||"").trim() || "Ohne Namen";
+        if(!unter) continue;
+        if(!sammName)     gehe(unter, name, "");
+        else if(!katName) gehe(unter, sammName, name);
+        else              gehe(unter, sammName, katName + " / " + name);
       } else if(a && a.getAttribute("href")){
         const url = a.getAttribute("href");
-        if(/^(javascript|place):/i.test(url)) continue;
-        const k = pfad? holeKat(pfad) : (sonstige = sonstige || holeKat("Importiert"));
-        k.links.push({ id:uid("lnk"), titel:(a.textContent||domain(url)).trim()||url, url,
-          notiz:"", tags:[], order:k.links.length, updatedAt:jetzt(), deleted:false });
+        if(/^(javascript|place|data|chrome):/i.test(url)) continue;
+        const k = holeKat(holeSammlung(sammName || "Importiert").id, katName || "Allgemein");
+        k.links.push({ id:uid("lnk"), titel:((a.textContent||"").trim() || domain(url) || url),
+                       url, notiz:"", tags:[], order:k.links.length,
+                       updatedAt:jetzt(), deleted:false });
       }
     }
   }
-  const wurzel = doc.querySelector("dl");
-  if(wurzel) gehe(wurzel, "");
-  return { schema:1, updatedAt:jetzt(), geraet:geraetName(),
-           kategorien: kats.filter(k=>k.links.length) };
+
+  let wurzel = doc.querySelector("dl");
+  if(wurzel){
+    /* Verpackungen wie „Lesezeichenleiste“ überspringen: ein einzelner Ordner
+       ohne lose Links daneben ist keine Sammlung, sondern nur eine Hülle. */
+    for(let runde = 0; runde < 2; runde++){
+      const dts = Array.from(wurzel.children).filter(x => x.tagName === "DT");
+      const ordner = dts.filter(x => x.querySelector(":scope > h3"));
+      const lose   = dts.filter(x => x.querySelector(":scope > a"));
+      if(ordner.length === 1 && lose.length === 0){
+        const tiefer = ordner[0].querySelector(":scope > dl");
+        if(tiefer && tiefer.querySelector(":scope > dt > h3")){ wurzel = tiefer; continue; }
+      }
+      break;
+    }
+    gehe(wurzel, "", "");
+  }
+  return { schema:2, updatedAt:jetzt(), geraet:geraetName(),
+           sammlungen, kategorien:kats.filter(k => k.links.length), dock:[] };
 }
 
 async function importDateiLesen(datei){
@@ -1423,8 +1484,10 @@ async function importDateiLesen(datei){
   }
   if(!neu || !neu.kategorien.length){ toast("Keine Lesezeichen in der Datei gefunden."); return; }
   const anzahl = neu.kategorien.reduce((s,k)=>s+k.links.length,0);
-  const ok = await bestaetige(anzahl+" Links in "+neu.kategorien.length+
-    " Kategorien gefunden. Zu den vorhandenen Favoriten hinzufügen?", "Hinzufügen");
+  const benutzte = new Set(neu.kategorien.map(k=>k.sammlungId));
+  const sZahl = (neu.sammlungen||[]).filter(x=>benutzte.has(x.id)).length;
+  const ok = await bestaetige(anzahl+" Links in "+neu.kategorien.length+" Kategorien und "+
+    sZahl+" Sammlungen gefunden. Zu den vorhandenen Favoriten hinzufügen?", "Hinzufügen");
   if(!ok) return;
   S.daten = zusammenfuehren(S.daten, neu);
   geaendert(); zeichnen();
@@ -1506,25 +1569,63 @@ $("#dock").addEventListener("click", e=>{
 document.addEventListener("dragstart", e=>{
   const dk = e.target.closest(".dk[data-dock]");
   if(dk){ S.drag={typ:"dock", id:dk.dataset.dock};
-          e.dataTransfer.effectAllowed="move";
+          e.dataTransfer.effectAllowed="copyMove";
           e.dataTransfer.setData("text/plain", dk.href); return; }
   const a = e.target.closest(".lnk[data-link]");
   if(a){ S.drag={typ:"link", id:a.dataset.link, kat:a.dataset.kat};
-         e.dataTransfer.effectAllowed="move";
+         e.dataTransfer.effectAllowed="copyMove";
          e.dataTransfer.setData("text/plain", a.href); return; }
   const h = e.target.closest(".kat-kopf");
   if(h && S.bearbeiten){ const s=h.closest(".kat");
-    S.drag={typ:"kat", id:s.dataset.kat}; e.dataTransfer.effectAllowed="move";
+    S.drag={typ:"kat", id:s.dataset.kat}; e.dataTransfer.effectAllowed="copyMove";
     e.dataTransfer.setData("text/plain", s.dataset.kat); }
 });
 document.addEventListener("dragend", ()=>{ S.drag=null; zieleLoeschen(); });
+document.addEventListener("dragleave", e=>{ if(!e.relatedTarget) zieleLoeschen(); });
+/* Wird von außerhalb der Seite etwas Verlinktes gezogen? Während des Ziehens
+   darf der Inhalt aus Sicherheitsgründen nicht gelesen werden – nur die Typen. */
+function externerZug(dt){
+  if(!dt) return false;
+  const t = Array.from(dt.types || []);
+  return t.includes("text/uri-list") || t.includes("text/html") || t.includes("text/plain");
+}
+function externLesen(dt){
+  let url = "", titel = "";
+  const uri = (dt.getData("text/uri-list") || "").trim();
+  if(uri) url = uri.split(/\r?\n/).find(z => z && !z.startsWith("#")) || "";
+  const html = dt.getData("text/html") || "";
+  if(html){
+    try{
+      const a = new DOMParser().parseFromString(html, "text/html").querySelector("a[href]");
+      if(a){ titel = (a.textContent||"").trim(); if(!url) url = a.getAttribute("href") || ""; }
+    }catch(e){}
+  }
+  if(!url) url = (dt.getData("text/plain") || "").trim().split(/\s+/)[0] || "";
+  if(!/^[a-z][a-z0-9+.-]*:/i.test(url)){
+    if(/^[\w.-]+\.[a-z]{2,}([/?#]|$)/i.test(url)) url = "https://" + url; else url = "";
+  }
+  if(!/^https?:/i.test(url)) return null;
+  return { url, titel: titel || domain(url) || url };
+}
+
 function zieleLoeschen(){
   $$(".dragover").forEach(x=>x.classList.remove("dragover"));
   $$(".ziel").forEach(x=>x.classList.remove("ziel"));
 }
 
 document.addEventListener("dragover", e=>{
-  if(!S.drag) return;
+  /* Von außen hereingezogener Link: Schnellstartleiste oder Kategorie */
+  if(!S.drag){
+    if(!externerZug(e.dataTransfer)) return;
+    const ziel = e.target.closest("#dock, .kat-liste, .kat");
+    if(!ziel) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = "copy";
+    zieleLoeschen();
+    (e.target.closest("#dock") || e.target.closest(".kat")).classList.add("ziel");
+    const z = e.target.closest(".lnk[data-link], .dk[data-dock]");
+    if(z) z.classList.add("dragover");
+    return;
+  }
 
   /* Ziel Schnellstartleiste: Links hineinziehen, Dock-Einträge sortieren */
   const imDock = e.target.closest("#dock");
@@ -1565,7 +1666,36 @@ document.addEventListener("dragover", e=>{
   }
 });
 document.addEventListener("drop", e=>{
-  if(!S.drag) return;
+  /* Von außen hereingezogener Link */
+  if(!S.drag){
+    const ziel = e.target.closest("#dock, .kat-liste, .kat");
+    if(!ziel || !externerZug(e.dataTransfer)) return;
+    e.preventDefault();
+    zieleLoeschen();
+    const neu = externLesen(e.dataTransfer);
+    if(!neu){ toast("Daraus konnte ich keine Adresse lesen."); return; }
+    if(e.target.closest("#dock")){
+      const z = e.target.closest(".dk[data-dock]");
+      dockHinzufuegen(neu.titel, neu.url, z ? z.dataset.dock : null);
+    } else {
+      const kat = e.target.closest(".kat");
+      const k = findeKat(kat.dataset.kat); if(!k) return;
+      const z = e.target.closest(".lnk[data-link]");
+      const aktiv = aktiveLinks(k);
+      let idx = aktiv.length;
+      if(z){ const i = aktiv.findIndex(x=>x.id===z.dataset.link); if(i>=0) idx = i; }
+      const eintrag = { id:uid("lnk"), titel:neu.titel, url:neu.url, notiz:"", tags:[],
+                        order:idx, updatedAt:jetzt(), deleted:false };
+      aktiv.splice(idx, 0, eintrag);
+      const t = jetzt();
+      aktiv.forEach((x,i)=>{ if(x.order!==i || x===eintrag){ x.order=i; x.updatedAt=t; } });
+      k.links = aktiv.concat(k.links.filter(x=>x.deleted));
+      geaendert(); zeichnen();
+      toast("„"+eintrag.titel+"“ in „"+k.name+"“ übernommen.");
+    }
+    return;
+  }
+
   const d = S.drag; S.drag=null;
   zieleLoeschen();
 
@@ -1632,13 +1762,43 @@ $("#btnBearbeiten").onclick = bearbeitenUmschalten;
 $("#btnSync").onclick = ()=> syncJetzt(false);
 $("#btnMenue").onclick = ()=>{ menueFuellen(); $("#dlgMenue").showModal(); };
 
-$("#dlgLink").addEventListener("close", ()=>{ if($("#dlgLink").returnValue==="ok") linkSpeichernAusDialog(); });
-$("#dlgKat").addEventListener("close", ()=>{ if($("#dlgKat").returnValue==="ok") katSpeichernAusDialog(); });
-$("#dlgSamm").addEventListener("close", ()=>{ if($("#dlgSamm").returnValue==="ok") sammSpeichernAusDialog(); });
+/* Dialoge werden ausschließlich über Klicks bedient.
+   Auf das close-Ereignis von <dialog> ist kein Verlass: in manchen
+   Chrome-Fassungen bleibt es vollständig aus, dann ginge jede Eingabe
+   stillschweigend verloren. */
+function dialogVerdrahten(id, speichern){
+  const d = $(id);
+  d.addEventListener("click", e=>{
+    const b = e.target.closest("[data-dlg]");
+    if(!b) return;
+    e.preventDefault();
+    if(b.dataset.dlg === "ok"){ if(speichern() === false) return; }
+    d.close();
+  });
+  /* Eingabetaste in einem Feld = Speichern, Esc = Schließen */
+  d.addEventListener("keydown", e=>{
+    if(e.key === "Enter" && e.target.tagName === "INPUT"){
+      e.preventDefault();
+      if(speichern() === false) return;
+      d.close();
+    }
+  });
+}
+dialogVerdrahten("#dlgLink", linkSpeichernAusDialog);
+dialogVerdrahten("#dlgKat",  katSpeichernAusDialog);
+dialogVerdrahten("#dlgSamm", sammSpeichernAusDialog);
 $("#kFarben").addEventListener("click", e=>{
   const b=e.target.closest("button[data-f]"); if(!b) return;
   $$("#kFarben button").forEach(x=>x.setAttribute("aria-checked","false"));
   b.setAttribute("aria-checked","true");
+});
+$("#fKat").addEventListener("change", async e=>{
+  if(e.target.value !== "__neu") return;
+  const name = await frageText("Neue Kategorie");
+  if(!name){ katAuswahlFuellen($("#fKat"), (aktiveKats()[0]||{}).id); return; }
+  const id = katAnlegen(name);
+  katAuswahlFuellen($("#fKat"), id);
+  zeichnen();
 });
 $("#fUrl").addEventListener("blur", ()=>{
   const t=$("#fTitel"); if(!t.value.trim()){ const d=domain($("#fUrl").value.trim()); if(d) t.value=d; }
@@ -1728,6 +1888,7 @@ $("#importDatei").onchange = async e=>{
   await importDateiLesen(f);
   e.target.value = "";
 };
+$("#mAufteilen").onclick = async ()=>{ $("#dlgMenue").close(); await sammlungenAusNamen(); };
 $("#mZu").onclick = ()=> $("#dlgMenue").close();
 
 /* Beim Zurückkehren ins Fenster die Datei erneut lesen (Cloud-Abgleich) */

@@ -8,7 +8,7 @@
    zwischengespeichert, sonst käme veralteter Stand zurück.
    ============================================================ */
 
-const VERSION = "favoriten-v3";
+const VERSION = "favoriten-v4";
 const GERUEST = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", e => {

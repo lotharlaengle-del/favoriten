@@ -1,0 +1,5 @@
+# Niemals Daten ins Repository!  Ein GitHub-Pages-Repository ist oeffentlich.
+favoriten-daten.js
+favoriten-daten.js.bak
+favoriten-*.json
+sicherungen/
