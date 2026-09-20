@@ -134,6 +134,15 @@ html[data-theme="hell"] .chip.ok{background:#e9f6f0;border-color:#b6dfcc}
 .tr-kat{font-size:11px;color:var(--tx3);border:1px solid var(--line);
   padding:1px 7px;border-radius:99px;white-space:nowrap}
 mark{background:rgba(91,141,239,.32);color:inherit;border-radius:2px;padding:0 1px}
+.tr-leiste{display:flex;align-items:center;gap:8px;padding:6px 8px 8px;
+  border-bottom:1px solid var(--line);margin-bottom:4px;font-size:12px;color:var(--tx2);flex-wrap:wrap}
+.tr-leiste .btn{padding:5px 9px;font-size:12px}
+.tr-leiste .zahl{color:var(--tx3)}
+.tr-wahl{width:16px;height:16px;flex:0 0 16px;border-radius:4px;border:1.5px solid var(--line2);
+  display:grid;place-items:center;color:transparent;background:var(--card)}
+.tr-wahl:hover{border-color:var(--akz)}
+.lnk.gewaehlt .tr-wahl{background:var(--akz);border-color:var(--akz);color:#fff}
+.lnk.gewaehlt{background:rgba(91,141,239,.10)}
 .websuche{display:flex;align-items:center;gap:8px;padding:9px 8px;color:var(--tx2);
   border-top:1px solid var(--line);margin-top:4px}
 
@@ -352,6 +361,21 @@ html[data-theme="hell"] #dock{box-shadow:0 10px 30px rgba(20,30,60,.16)}
   </form>
 </dialog>
 
+<!-- ===== Dialog: Treffer verschieben ===== -->
+<dialog id="dlgVerschieben">
+  <form onsubmit="return false">
+    <div class="dlg-kopf">Treffer verschieben</div>
+    <div class="dlg-body">
+      <div class="hinweis" id="vsInfo"></div>
+      <label class="f">Zielkategorie<select id="vsZiel"></select></label>
+    </div>
+    <div class="dlg-fuss">
+      <button type="button" class="btn" data-dlg="zu">Abbrechen</button>
+      <button type="button" class="btn prim" data-dlg="ok">Verschieben</button>
+    </div>
+  </form>
+</dialog>
+
 <!-- ===== Dialog: Menü / Einstellungen ===== -->
 <dialog id="dlgMenue">
   <div class="dlg-kopf">Verwalten</div>
@@ -480,6 +504,7 @@ const S = {
   bearbeiteSamm:null,
   treffer:[],
   auswahl:-1,
+  markiert:new Set(),       // im Suchergebnis markierte Links
   drag:null,
   bearbeiteLink:null,
   bearbeiteKat:null,
@@ -1048,7 +1073,8 @@ function statusZeichnen(){
 /* ================================ Suche ================================== */
 function suchen(q){
   q = q.trim().toLowerCase();
-  if(!q){ S.treffer=[]; $("#treffer").style.display="none"; $("#raster").style.display=""; return; }
+  if(!q){ S.treffer=[]; S.markiert.clear();
+          $("#treffer").style.display="none"; $("#raster").style.display=""; return; }
   const worte = q.split(/\s+/);
   const erg = [];
   for(const k of alleKats()){
@@ -1089,16 +1115,37 @@ function trefferZeichnen(q){
   const box = $("#treffer");
   $("#raster").style.display = "none";
   box.style.display = "flex";
-  let html = S.treffer.map((t,i)=>{
+
+  /* Markierungen, die gar nicht mehr im Ergebnis stehen, fallen weg */
+  const sichtbar = new Set(S.treffer.map(t=>t.link.id));
+  for(const id of Array.from(S.markiert)) if(!sichtbar.has(id)) S.markiert.delete(id);
+
+  const n = S.markiert.size;
+  let html = '<div class="tr-leiste">'+
+    '<span class="zahl">'+S.treffer.length+' Treffer</span>'+
+    (S.treffer.length ? '<button class="btn" data-tat="alle">'+
+        (n===S.treffer.length ? "Auswahl aufheben" : "Alle auswählen")+'</button>' : '')+
+    (n ? '<span style="color:var(--akz);font-weight:600">'+n+' ausgewählt</span>'+
+         '<button class="btn prim" data-tat="verschieben">In eine Kategorie verschieben …</button>'+
+         '<button class="btn" data-tat="dock">In den Schnellstart</button>' : '')+
+    '</div>';
+
+  html += S.treffer.map((t,i)=>{
     const d = domain(t.link.url);
-    return '<a class="lnk'+(i===S.auswahl?" aktiv":"")+'" data-i="'+i+'" data-link="'+esc(t.link.id)+'" '+
+    const markiert = S.markiert.has(t.link.id);
+    return '<a class="lnk'+(i===S.auswahl?" aktiv":"")+(markiert?" gewaehlt":"")+'" data-i="'+i+'" '+
+      'data-link="'+esc(t.link.id)+'" draggable="true" '+
       'href="'+esc(t.link.url)+'"'+(S.einst.neuerTab? ' target="_blank" rel="noopener"':'')+'>'+
+      '<span class="tr-wahl" data-tat="waehlen">'+
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" '+
+        'stroke-width="3.2" stroke-linecap="round"><path d="M4 12l6 6L20 6"/></svg></span>'+
       kachelHtml(t.link)+
       '<span class="lnk-txt">'+markiere(t.link.titel,q)+'</span>'+
       '<span class="tr-kat">'+esc(sammlungsName(t.kat))+esc(t.kat.name)+'</span>'+
       '<span class="lnk-dom">'+esc(d)+'</span></a>';
   }).join("");
-  if(!S.treffer.length) html = '<div class="leer">kein Favorit passt zu „'+esc(q)+'“</div>';
+
+  if(!S.treffer.length) html += '<div class="leer">kein Favorit passt zu „'+esc(q)+'“</div>';
   if(S.einst.suchmaschine){
     html += '<div class="websuche">'+
       '<span class="kachel" style="background:var(--tx3)">?</span>'+
@@ -1106,6 +1153,90 @@ function trefferZeichnen(q){
       '<span class="tr-kat">⏎ wenn nichts markiert</span></div>';
   }
   box.innerHTML = html;
+}
+
+/* Mehrere Links auf einmal umhängen – ein Durchgang, eine Neuzeichnung */
+function linkeVerschieben(ids, zielKatId){
+  const ziel = findeKat(zielKatId); if(!ziel) return 0;
+  const t = jetzt();
+  let bewegt = 0;
+  for(const id of ids){
+    const f = findeLink(id);
+    if(!f || f.kat.id === zielKatId) continue;
+    f.kat.links = f.kat.links.filter(x=>x.id!==id);
+    ziel.links.push(f.link);
+    f.link.updatedAt = t;
+    bewegt++;
+  }
+  if(!bewegt) return 0;
+  for(const k of S.daten.kategorien){
+    const aktiv = k.links.filter(x=>!x.deleted).sort((a,b)=>a.order-b.order);
+    aktiv.forEach((x,i)=>{ if(x.order!==i){ x.order=i; x.updatedAt=t; } });
+    k.links = aktiv.concat(k.links.filter(x=>x.deleted));
+  }
+  geaendert();
+  return bewegt;
+}
+
+async function markierteVerschieben(){
+  const ids = Array.from(S.markiert);
+  if(!ids.length) return;
+  const kats = alleKats();
+  if(!kats.length){ toast("Es gibt noch keine Kategorie."); return; }
+
+  $("#vsInfo").textContent = ids.length + " Link(e) verschieben nach:";
+  const sel = $("#vsZiel");
+  sel.innerHTML = aktiveSamm().map(sa =>
+      '<optgroup label="'+esc(sa.name)+'">'+
+      kats.filter(k=>k.sammlungId===sa.id).map(k=>
+        '<option value="'+esc(k.id)+'">'+esc(k.name)+' ('+aktiveLinks(k).length+')</option>').join("")+
+      '</optgroup>').join("") +
+    '<option value="__neu">＋ neue Kategorie …</option>';
+  $("#dlgVerschieben").showModal();
+}
+
+async function verschiebenAusDialog(){
+  let katId = $("#vsZiel").value;
+  const ids = Array.from(S.markiert);
+  $("#dlgVerschieben").close();
+  if(katId === "__neu"){
+    const sam = aktiveSamm();
+    let sammId = sam.length===1 ? sam[0].id : null;
+    if(!sammId){
+      sammId = await frageWahl("In welche Sammlung?", "Die neue Kategorie gehört nach:",
+        sam.map(x=>({wert:x.id, text:x.name})));
+      if(!sammId) return;
+    }
+    const name = await frageText("Neue Kategorie");
+    if(!name) return;
+    const merk = S.sammlung;
+    S.sammlung = sammId;
+    katId = katAnlegen(name);
+    S.sammlung = merk;
+  }
+  const n = linkeVerschieben(ids, katId);
+  S.markiert.clear();
+  zeichnen();
+  if($("#suche").value.trim()) suchen($("#suche").value);
+  const k = findeKat(katId);
+  toast(n + " Link(e) nach „" + (k? k.name : "?") + "“ verschoben.");
+}
+
+function markierteInsDock(){
+  let n = 0;
+  for(const id of S.markiert){
+    const f = findeLink(id);
+    if(f && !aktivesDock().some(e=>e.url===f.link.url)){
+      const liste = aktivesDock();
+      S.daten.dock.push({ id:uid("dck"), titel:f.link.titel, url:f.link.url,
+                          order:liste.length, updatedAt:jetzt(), deleted:false });
+      n++;
+    }
+  }
+  S.markiert.clear();
+  geaendert(); zeichnen();
+  if($("#suche").value.trim()) suchen($("#suche").value);
+  toast(n ? n+" in den Schnellstart übernommen." : "Alles schon in der Leiste.");
 }
 
 function auswahlBewegen(d){
@@ -1596,11 +1727,27 @@ suche.addEventListener("keydown", e=>{
   else if(e.key==="Escape"){ suche.value=""; suchen(""); suche.blur(); }
 });
 $("#treffer").addEventListener("click", e=>{
-  const a = e.target.closest(".lnk"); if(!a) return;
-  if(!S.einst.neuerTab && !e.ctrlKey && !e.metaKey){ /* normaler Link */ }
+  const w = e.target.closest("[data-tat]");
+  if(!w) return;                       /* sonst: ganz normaler Link */
+  e.preventDefault(); e.stopPropagation();
+  if(w.dataset.tat === "waehlen"){
+    const a = e.target.closest(".lnk[data-link]"); if(!a) return;
+    const id = a.dataset.link;
+    if(S.markiert.has(id)) S.markiert.delete(id); else S.markiert.add(id);
+    trefferZeichnen($("#suche").value.trim());
+    return;
+  }
+  if(w.dataset.tat === "alle"){
+    if(S.markiert.size === S.treffer.length) S.markiert.clear();
+    else for(const t of S.treffer) S.markiert.add(t.link.id);
+    trefferZeichnen($("#suche").value.trim());
+    return;
+  }
+  if(w.dataset.tat === "verschieben") return markierteVerschieben();
+  if(w.dataset.tat === "dock")        return markierteInsDock();
 });
 $("#treffer").addEventListener("mousemove", e=>{
-  const a = e.target.closest(".lnk"); if(!a) return;
+  const a = e.target.closest(".lnk[data-i]"); if(!a) return;
   const i = +a.dataset.i;
   if(i!==S.auswahl){ S.auswahl=i; $$("#treffer .lnk").forEach((x,j)=>x.classList.toggle("aktiv",j===i)); }
 });
@@ -1878,6 +2025,12 @@ function dialogVerdrahten(id, speichern){
 dialogVerdrahten("#dlgLink", linkSpeichernAusDialog);
 dialogVerdrahten("#dlgKat",  katSpeichernAusDialog);
 dialogVerdrahten("#dlgSamm", sammSpeichernAusDialog);
+$("#dlgVerschieben").addEventListener("click", e=>{
+  const b = e.target.closest("[data-dlg]"); if(!b) return;
+  e.preventDefault();
+  if(b.dataset.dlg === "ok") verschiebenAusDialog();
+  else $("#dlgVerschieben").close();
+});
 $("#kFarben").addEventListener("click", e=>{
   const b=e.target.closest("button[data-f]"); if(!b) return;
   $$("#kFarben button").forEach(x=>x.setAttribute("aria-checked","false"));
