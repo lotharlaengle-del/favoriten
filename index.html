@@ -120,6 +120,7 @@ html[data-theme="hell"] .chip.ok{background:#e9f6f0;border-color:#b6dfcc}
   text-transform:uppercase;overflow:hidden;
 }
 .kachel img{width:100%;height:100%;object-fit:contain}
+.kachel.lokal{background:#c8962f;color:#fff8e6}
 .lnk-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lnk-dom{font-size:11px;color:var(--tx3);white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;max-width:38%}
@@ -307,8 +308,8 @@ html[data-theme="hell"] #dock{box-shadow:0 10px 30px rgba(20,30,60,.16)}
   <form onsubmit="return false">
     <div class="dlg-kopf" id="dlgLinkTitel">Favorit</div>
     <div class="dlg-body">
-      <label class="f">URL
-        <input id="fUrl" type="text" placeholder="https://…"></label>
+      <label class="f">Adresse oder Ordnerpfad
+        <input id="fUrl" type="text" placeholder="https://… oder C:\…"></label>
       <label class="f">Titel
         <input id="fTitel" type="text" placeholder="wird aus der Adresse abgeleitet"></label>
       <div class="reihe">
@@ -525,7 +526,26 @@ function geraetName(){
   return g;
 }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
-function domain(url){ try{ return new URL(url).hostname.replace(/^www\./,""); }catch(e){ return ""; } }
+function domain(url){ if(istLokal(url)) return ""; try{ return new URL(url).hostname.replace(/^www\./,""); }catch(e){ return ""; } }
+
+/* Lokale Ordner (C:\…, %VARIABLE%\…, \\Server\…, file:///…). Der Browser darf sie
+   nicht öffnen; deshalb laufen sie über das eigene Linkschema "ordner:", das der
+   Ordner-Öffner auf dem Windows-PC entgegennimmt (siehe ordner-oeffner/). */
+const AUF_WINDOWS = /Windows/i.test(navigator.userAgent);
+function istLokal(u){ return /^([a-z]:[\\/]|\\\\|%[\w()]+%|file:)/i.test(String(u||"").trim()); }
+function ordnerPfad(u){
+  u = String(u||"").trim().replace(/^"(.*)"$/,"$1");
+  if(/^file:/i.test(u)){
+    u = u.replace(/^file:\/*/i,"");
+    try{ u = decodeURIComponent(u); }catch(e){}
+    if(!/^[a-z]:/i.test(u)) u = "//"+u;
+    u = u.replace(/\//g,"\\");
+  }
+  return u;
+}
+function ordnerName(u){ const t = ordnerPfad(u).replace(/[\\/]+$/,"").split(/[\\/]/).pop(); return t || ordnerPfad(u); }
+function hrefFuer(u){ return istLokal(u)? (AUF_WINDOWS? "ordner:"+encodeURIComponent(ordnerPfad(u)) : "#lokal") : u; }
+function zielAttr(u){ return (S.einst.neuerTab && !istLokal(u))? ' target="_blank" rel="noopener"' : ''; }
 function farbeFuer(t){ let h=0; for(let i=0;i<t.length;i++) h=(h*31+t.charCodeAt(i))>>>0; return FARBEN[h%FARBEN.length]; }
 function toast(t){ const e=$("#toast"); e.textContent=t; e.classList.add("zeig");
   clearTimeout(toast._t); toast._t=setTimeout(()=>e.classList.remove("zeig"),2200); }
@@ -927,6 +947,8 @@ function syncText(){
 /* ============================== Darstellung ============================== */
 
 function kachelHtml(l){
+  if(istLokal(l.url)) return '<span class="kachel lokal"><svg width="60%" height="60%" viewBox="0 0 24 24" '+
+    'fill="currentColor"><path d="M3 6.5A1.5 1.5 0 014.5 5h4.2l2 2h8.8A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z"/></svg></span>';
   const d = domain(l.url);
   const f = farbeFuer(d||l.titel);
   const buchstabe = esc((l.titel||d||"?").trim().charAt(0));
@@ -942,12 +964,12 @@ function kachelHtml(l){
 function linkHtml(l, katId, mitKat){
   const d = domain(l.url);
   return '<a class="lnk" draggable="true" data-link="'+esc(l.id)+'" data-kat="'+esc(katId)+'" '+
-    'href="'+esc(l.url)+'" title="'+esc(l.titel+(l.notiz? " — "+l.notiz:"")+"\n"+l.url)+'"'+
-    (S.einst.neuerTab? ' target="_blank" rel="noopener"':'')+'>'+
+    'href="'+esc(hrefFuer(l.url))+'" title="'+esc(l.titel+(l.notiz? " — "+l.notiz:"")+"\n"+l.url)+'"'+
+    zielAttr(l.url)+'>'+
     kachelHtml(l)+
     '<span class="lnk-txt">'+esc(l.titel)+'</span>'+
     (mitKat? '<span class="tr-kat">'+esc(mitKat)+'</span>':'')+
-    (S.einst.domain? '<span class="lnk-dom">'+esc(d)+'</span>':'')+
+    (S.einst.domain? '<span class="lnk-dom">'+esc(istLokal(l.url)? "Ordner" : d)+'</span>':'')+
     '<span class="lnk-wkz">'+
       '<button class="mini" data-tat="link-bearb" title="Bearbeiten">'+ikone("stift")+'</button>'+
       '<button class="mini gefahr" data-tat="link-weg" title="Löschen">'+ikone("muell")+'</button>'+
@@ -1006,8 +1028,8 @@ function dockZeichnen(){
     return;
   }
   d.innerHTML = eintraege.map(e=>
-    '<a class="dk" draggable="true" data-dock="'+esc(e.id)+'" href="'+esc(e.url)+'" '+
-      'title="'+esc(e.titel+"\n"+e.url)+'"'+(S.einst.neuerTab? ' target="_blank" rel="noopener"':'')+'>'+
+    '<a class="dk" draggable="true" data-dock="'+esc(e.id)+'" href="'+esc(hrefFuer(e.url))+'" '+
+      'title="'+esc(e.titel+"\n"+e.url)+'"'+zielAttr(e.url)+'>'+
       kachelHtml(e)+
       '<span class="dk-txt">'+esc(e.titel)+'</span>'+
       '<button class="mini gefahr dk-weg" data-tat="dock-weg" title="Aus der Leiste entfernen">'+
@@ -1135,14 +1157,14 @@ function trefferZeichnen(q){
     const markiert = S.markiert.has(t.link.id);
     return '<a class="lnk'+(i===S.auswahl?" aktiv":"")+(markiert?" gewaehlt":"")+'" data-i="'+i+'" '+
       'data-link="'+esc(t.link.id)+'" draggable="true" '+
-      'href="'+esc(t.link.url)+'"'+(S.einst.neuerTab? ' target="_blank" rel="noopener"':'')+'>'+
+      'href="'+esc(hrefFuer(t.link.url))+'"'+zielAttr(t.link.url)+'>'+
       '<span class="tr-wahl" data-tat="waehlen">'+
         '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" '+
         'stroke-width="3.2" stroke-linecap="round"><path d="M4 12l6 6L20 6"/></svg></span>'+
       kachelHtml(t.link)+
       '<span class="lnk-txt">'+markiere(t.link.titel,q)+'</span>'+
       '<span class="tr-kat">'+esc(sammlungsName(t.kat))+esc(t.kat.name)+'</span>'+
-      '<span class="lnk-dom">'+esc(d)+'</span></a>';
+      '<span class="lnk-dom">'+esc(istLokal(t.link.url)? "Ordner" : d)+'</span></a>';
   }).join("");
 
   if(!S.treffer.length) html += '<div class="leer">kein Favorit passt zu „'+esc(q)+'“</div>';
@@ -1247,6 +1269,11 @@ function auswahlBewegen(d){
 }
 
 function oeffne(url, neuerTab){
+  if(istLokal(url)){
+    if(AUF_WINDOWS) location.href = hrefFuer(url);
+    else toast("Lokaler Ordner – lässt sich nur am Windows-PC öffnen");
+    return;
+  }
   if(neuerTab || S.einst.neuerTab) window.open(url,"_blank","noopener");
   else location.href = url;
 }
@@ -1338,8 +1365,10 @@ function linkDialog(linkId, katId){
 function linkSpeichernAusDialog(){
   let url = $("#fUrl").value.trim();
   if(!url){ $("#fUrl").focus(); return false; }
-  if(!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = "https://"+url;
-  let titel = $("#fTitel").value.trim() || domain(url) || url;
+  url = url.replace(/^"(.*)"$/,"$1").trim();      /* „Als Pfad kopieren“ liefert Anführungszeichen */
+  if(istLokal(url)) url = ordnerPfad(url);
+  else if(!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = "https://"+url;
+  let titel = $("#fTitel").value.trim() || (istLokal(url)? ordnerName(url) : domain(url)) || url;
   const notiz = $("#fNotiz").value.trim();
   const tags  = $("#fTags").value.split(",").map(s=>s.trim()).filter(Boolean);
   let katId = $("#fKat").value;
@@ -1752,6 +1781,14 @@ $("#treffer").addEventListener("mousemove", e=>{
   if(i!==S.auswahl){ S.auswahl=i; $$("#treffer .lnk").forEach((x,j)=>x.classList.toggle("aktiv",j===i)); }
 });
 
+/* Lokale Ordner auf Handy & Co.: nur Hinweis statt Sprung */
+document.addEventListener("click", e=>{
+  const a = e.target.closest('a[href="#lokal"]');
+  if(!a || e.target.closest("[data-tat]")) return;
+  e.preventDefault();
+  toast("Lokaler Ordner – lässt sich nur am Windows-PC öffnen");
+});
+
 /* Klicks im Raster: Werkzeuge abfangen, sonst Link öffnen lassen */
 $("#raster").addEventListener("click", e=>{
   const b = e.target.closest("[data-tat]");
@@ -1838,7 +1875,11 @@ function externLesen(dt){
       if(a){ titel = (a.textContent||"").trim(); if(!url) url = a.getAttribute("href") || ""; }
     }catch(e){}
   }
-  if(!url) url = (dt.getData("text/plain") || "").trim().split(/\s+/)[0] || "";
+  if(!url){
+    const z = (dt.getData("text/plain") || "").trim().split(/\r?\n/)[0].trim().replace(/^"(.*)"$/,"$1");
+    if(istLokal(z)) return { url: ordnerPfad(z), titel: ordnerName(z) };
+    url = z.split(/\s+/)[0] || "";
+  }
   if(!/^[a-z][a-z0-9+.-]*:/i.test(url)){
     if(/^[\w.-]+\.[a-z]{2,}([/?#]|$)/i.test(url)) url = "https://" + url; else url = "";
   }
